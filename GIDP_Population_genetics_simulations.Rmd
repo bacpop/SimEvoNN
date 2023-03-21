@@ -1,0 +1,216 @@
+---
+title: "Pathogen population genetics simulations"
+author: "John Lees (j.lees@imperial.ac.uk)"
+date: "26/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Objectives
+
+This practical will introduce genetic drift and selection through the use of _in silico_ simulation. You will use the R programming language to carry out these simulations, using loops, R's data structures and random number functions.
+
+## Introduction
+
+Models of population genetics were developed before we had an understanding of their molecular basis (i.e. DNA and the central dogma). We use the concepts of alleles, which are a genetic variant, and genotypes, which are the full set of alleles of an individual, without specifying their exact genetic basis. Here we will start by considering a diploid organism with two alleles A and B at a single site. We can simulate a population of individuals forward in time to examine the dynamics of these alleles at a population-wide level. Your simulations will demonstrate **drift**, which changes allele frequencies due to random sampling of individuals, and **selection** which changes allele frequencies due to a fitness effect.
+
+The parameters of these simulations are based on a seminal experiment by [Peter Buri](https://www.jstor.org/stable/2406998), who used populations of fruit flies with an allele which changes the colour of the animal's eyes. There were 32 flies in each generation, and in each subsequent generation exactly 32 eggs were picked to be carried forward for 20 generations. This experiment was repeated 107 times. Once we have set up these simulations, we will consider how they can be adapted to haploid pathogens.
+
+## Questions
+
+With two alleles A and B at two sites (from each parent; diploid) the possible  genotypes for each individual are AA, AB, BA and BB. We will represent these as 0 (AA), 1 (AB and BA) or 2 (BB) based on number of copies of the B allele they have.
+
+### Q1
+
+What are the relationships between every pair of parent's genotypes and the child's genotype for each possible pairing, using the 0, 1, 2 coding? What are the probabilities for each outcome? 
+
+\begin{align*}
+0 + 0 &\rightarrow ? \\
+0 + 1 &\rightarrow ? \\
+1 + 1 &\rightarrow ? \\
+1 + 2 &\rightarrow ? \\
+2 + 2 &\rightarrow ?
+\end{align*}
+
+### Q2
+
+Write an R function which takes the two parent genotypes and outputs a child genotype based on these probabilities. You may find the `runif()` or `rbinom()` functions useful for generating random numbers.
+
+```{r}
+child_genotype <- function(genotypes) {
+  child = 0
+  # Genotype 0 never contributes a B allele to the child
+  # Genotype 1 has a 50% chance of contributing a B allele to the child
+  # Genotype 2 always contributes a B allele to the child
+  for (g in genotypes) {
+    if (g == 2) {
+      ## UNCOMMENT AND FILL IN THIS LINE:
+      # child <- ?
+    } else if (g == 1) {
+      ## UNCOMMENT AND FILL IN THIS LINE:
+      # child <- ?
+    }
+  }
+  child
+}
+```
+
+### Q3
+
+We will now do the simulation. First, you should declare an `array` with appropriate dimensions to hold the genotypes of 32 individuals over 20 generations. Note that unlike in some other programming languages you may be familiar with, lists and arrays in R are inefficient when resized, so an `append`-like function should be avoided. Instead, the size of the object to store results should be declared but left empty with `data = NA`, and then items inserted directly using indices.
+
+Now, write an inner loop which for each of the 32 $i$ individuals in generation $t + 1$, randomly samples two parents from the previous generation $t$, and assigns a child genotype using your function from **Q2**. Note that in this experiment the starting population at $t = 1$ is 32 individuals with the AB/1 genotype. You may find the `sample()` function useful to pick parents.
+
+Then, write a first outer loop which repeats this sampling N = 20 times, for each new generation, and stores the results. Output a summary with the population allele frequency at each step, and plot this against the number of generations.
+
+```{r}
+# Set up an array, with individuals along rows, generations along columns
+n_generations <- 20
+n_individuals <- 32
+population <- array(dim = c(n_individuals, n_generations))
+b_freq <- array(dim = c(n_generations))
+
+# Set the initial condition at the first step
+population[, 1] <- 1
+b_freq[1] <- sum(population[, 1]) / (2 * n_individuals)
+
+for (generation in 2:n_generations) {
+  for (individual in 1:n_individuals) {
+    ## UNCOMMENT AND FILL IN THESE LINES
+    # parents <- sample(?, size = 2)
+    # population[?, ?] <- child_genotype(parents)
+  }
+  ## UNCOMMENT AND FILL IN THIS LINE
+  # b_freq[generation] <- sum(?) / (2 * n_individuals)
+}
+
+# UNCOMMENT WHEN WORKING
+# plot(b_freq, ylim = c(0, 1), xlab = "Generation", ylab = "B allele frequency", type = 'l')
+```
+
+### Q4
+
+Write a second outer loop which repeats this experiment 107 times, for each of the 107 independent populations. You will need to increase the dimension of your population and frequency arrays appropriately. Plot the allele frequency against generation for all of your repeats on a single plot. You can add multiple lines to the same plot using `matplot`.
+
+```{r}
+n_repeats <- 107
+n_generations <- 20
+n_individuals <- 32
+# Note an extra dimensions is added here
+population <- array(dim = c(n_individuals, n_generations, n_repeats))
+b_freq <- array(dim = c(n_generations, n_repeats))
+
+# Set the initial condition at the first step
+population[, 1, ] <- 1
+# We must calculate b_freq for every repeat. This could be done in a loop,
+# more more efficently with apply
+# UNCOMMENT AND FILL IN THIS LINE
+# b_freq[1, ] <- apply(?, ?, sum) / (2 * n_individuals)
+
+for (r_idx in 1:n_repeats) {
+  for (generation in 2:n_generations) {
+    for (individual in 1:n_individuals) {
+      # UNCOMMENT AND FILL IN THESE LINES
+      # parents <- ?
+      # ? <- child_genotype(parents)
+    }
+    # UNCOMMENT AND FILL IN THIS LINE
+    # b_freq[generation, r_idx] <- sum(?) / (2 * n_individuals)
+  }
+}
+
+# UNCOMMENT THESE LINES WHEN WORKING
+# Default matplot
+#matplot(seq(1, n_generations), b_freq, type = 'l', xlab = "Generation", ylab = "B allele frequency")
+# With gray lines
+#matplot(seq(1, n_generations), b_freq, 
+#        type = 'l', col = rgb(0x99/256, 0x99/256, 0x99/256, alpha = 0.5), 
+#        lty = 1, xlab = "Generation", ylab = "B allele frequency")
+```
+
+### Q5
+
+Wrap your answer to question 4 in a function which takes as input:
+
+* The number of individuals in the population
+* The number of generations
+* The number of repeats
+
+It should then run the simulation with these parameters, and produce a plot of the output.
+
+Use a smaller number of repeats so you can see the individual lines, and repeat this for different population sizes and more generations. How do the plots change? 
+
+```{r}
+pop_sim <- function(n_repeats, n_generations, n_individuals, name) {
+  # ADD YOUR CODE FROM ABOVE HERE
+}
+```
+
+### Q6
+
+We will now add an effect of selection on the B allele. Selection on an allele is often quantified as a fitness advantage $s$, where wild-type parents produce on average one offspring in the next generation, and mutants (with the allele) produce on average $1 + s$ offspring. Modify your function from above so that it takes $s$ as a parameter, uses probability weights in the `prob` argument of `sample` to give fitter parents higher probability of producing children in the next generation.
+
+Run your simulation for a few values of $s$, positive and negative. How does this affect time to fixation or purging? Is it possible for alleles with a fitness advantage to be purged from a population? How does this interact with population size?
+
+```{r}
+## Replace the code where you sample parents in your loop with the following code, after adding a function to calculate the weights = 1 + s * (# copies of B allele)
+# weights <- ?
+# weights <- weights / sum(weights)
+# parents <- sample(?, size = 2, prob = ?)
+```
+
+$s > 0$ decreases probability of purging, and time to fixation. Vice-versa for $s < 0$. These effects grow with $s$. The probability of fixation increase with population size, but time is not affected. When $s \ll \frac{1}{N}$ drift dominates, when $s \gg \frac{1}{N}$ selection dominates.
+
+### Q7a
+
+Finally, we will simulate a haploid population, and show how the efficiency of the code can be increased. Bacteria have only a single copy of their chromosome and clone themselves between each generation, so there are only two genotypes A and B, which are just randomly sampled from parent cells to produce child cells in the next generation.
+
+First, remove the effect of selection from the previous question. Then, change your existing code so that the function for child genotype is eliminated, and subsequent genotypes are simply sampled from the current generation. Confirm that this code runs and you can plot results as before.
+
+### Q7b
+
+Next, notice that this could instead be expressed as a binomial distribution where sampling a B allele is a success. The number of trials is the population size, and the probability of success is the B allele frequency in the previous generation. Use `rbinom` to replace the innermost loop. Make plots with varying population sizes, as in Q5. How has the time to fixation changed?
+
+The first approach may also be called an `individual-based model', as every individual in the population is simulated. The second approach is a more typical way to write a Wright-Fisher simulation. What are the advantages and disadvantages of this change?
+
+```{r}
+pop_sim_haploid <- function(n_repeats, n_generations, n_individuals, name) {
+  population <- array(dim = c(n_generations, n_repeats))
+  b_freq <- array(dim = c(n_generations, n_repeats))
+  
+  # Set the initial condition at the first step
+  b_freq[1, ] <- 0.5
+  
+  for (repeat_idx in 1:n_repeats) {
+    for (generation in 2:n_generations) {
+      ## UNCOMMENT AND FILL IN THESE LINES
+      #number_mutants <- rbinom(n = 1, 
+      #                         size = ?, 
+      #                         prob = ?)
+      #b_freq[generation, repeat_idx] <- ?
+    }
+  }
+  # ADD A PLOT COMMAND FROM ABOVE
+}
+```
+
+## Further questions
+
+If you have time, or are interested, some further questions to consider, some of which can be answered by your simulation code:
+
+- How do different initial conditions (starting population genotype) affect the results?
+- How could a mutation rate per site per generation $\mu$ be introduced into the simulations? Could a mutation ever reach fixation by drift alone?
+- What is the average time to fixation or loss of the B allele?
+- Compare your results to the experiment? How do they differ? At what population size to the results best match? How does this relate to the concept of [effective population size](https://www.nature.com/articles/nrg.2016.58)?
+- What is the average number of generations back in time for two samples to share a common ancestor, and how does this relate to the population size?
+
+### Extensions
+
+More extensions to these simulations outside the scope of this practical:
+
+- In a diploid population, an allele may have a dominant, additive or recessive effect on expression of a phenotype. How would each of these relate the possible genotypes to a phenotype, if their relation is Mendelian (also known as fully penetrant).
+- If instead, each copy of the allele has an odds-ratio of 1.5 over a baseline 25% expression of a binary phenotype, what would the distribution of phenotypes be at each step in your simulator?
+- Change the simulations so the population size can vary over time. What happens to the B allele frequency after a bottleneck and re-expansion?
