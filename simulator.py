@@ -42,7 +42,7 @@ def plot_multiallele(allele_freq, n_generations, alleles):
 
 
 def fisher_wright_simulator(alleles:list, n_repeats, n_generations, n_individuals, mutation_rate=0.0):
-    ##(Fisher-Wright) model
+    ##(Fisher-Wright) model on haploid population
     n_alleles = len(alleles)
     if n_alleles > 2: dist_func = np.random.multinomial
     else: dist_func = np.random.binomial
@@ -65,17 +65,6 @@ def fisher_wright_simulator(alleles:list, n_repeats, n_generations, n_individual
 
 #sim_haploid(10, 100, 100, "Haploid")
 
-##alleles:list, n_repeats, n_generations, n_individuals, name
-#multiallele_simulator(["A", "B", "C", "D", "E", "F","G", "H"], 5, 100, 1000000, "Multiallele")
-#multiallele_simulator(["A", "B", "C", "D", "E", "F","G", "H", "I", "J"], 10, 100, 100, "Multiallele")
-#multiallele_simulator(["A", "B", "C"], 5, 1000000, 10000, "Multiallele")
-
-##Multiallele (Fisher-Wright) model with selection
-
-##Multiallele (Fisher-Wright) model with migration
-
-
-##Multiallele (Fisher-Wright) model with mutation
 ## requires a mutation probability n_alleleXn_allele matrix (U)
 ## For mutation model, Jukes-Cantor model can be used.
 ## take into account the mutation rate (mu) and the mutation probability (U)
@@ -88,4 +77,7 @@ def jc_mutation_calc(n_alleles, mutation_rate=0.0):
     np.fill_diagonal(U, 1 - mutation_rate)
     return U
 
-fisher_wright_simulator(["A", "B", "C", "D"], 3, 10, 10, mutation_rate=1)
+##alleles:list, n_repeats, n_generations, n_individuals
+#fisher_wright_simulator(["A", "B", "C", "D", "E", "F"], 5, 1000, 20, mutation_rate=0.0015)
+fisher_wright_simulator(["A", "B"], 5, 1000, 20, mutation_rate=0.0015)
+## Note, adding mutation rate prevents allele extinction or fixation
