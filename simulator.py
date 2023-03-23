@@ -77,7 +77,7 @@ def jc_mutation_calc(n_alleles, mutation_rate=0.0):
     np.fill_diagonal(U, 1 - mutation_rate)
     return U
 
-##alleles:list, n_repeats, n_generations, n_individuals
-#fisher_wright_simulator(["A", "B", "C", "D", "E", "F"], 5, 1000, 20, mutation_rate=0.0015)
-fisher_wright_simulator(["A", "B"], 5, 1000, 20, mutation_rate=0.0015)
+##parameters : alleles:list, n_repeats, n_generations, n_individuals
+fisher_wright_simulator(["A", "B", "C", "D", "E", "F"], 5, 1000, 20, mutation_rate=0.0015)
+#fisher_wright_simulator(["A", "B"], 5, 10, 1000, mutation_rate=0.0)
 ## Note, adding mutation rate prevents allele extinction or fixation
