@@ -13,9 +13,9 @@ def deriv(y, t, N, beta, gamma):
     return dSdt, dIdt, dRdt
 
 
-def simulate_deterministic_SIR(days, N, beta, gamma, I):
-    t=np.linspace(0, days, days)
-    I0, R0 = 1, 0
+def simulate_deterministic_SIR(n_days,n_infected, N, beta, gamma):
+    t=np.linspace(0, n_days, n_days)
+    I0, R0 = n_infected, 0
     S0 = N - I0 - R0
     y0 = S0, I0, R0
     ret = odeint(deriv, y0, t, args=(N, beta, gamma))
@@ -23,7 +23,7 @@ def simulate_deterministic_SIR(days, N, beta, gamma, I):
     return t, S, I, R
 
 
-def plot_deterministic_SIR(t, S, I, R):
+def plot_SIR(t, S, I, R):
     fig = plt.figure(facecolor='w')
     ax = fig.add_subplot(111, facecolor='#dddddd', axisbelow=True)
     ax.plot(t, S/1000, 'b', alpha=0.5, lw=2, label='Susceptible')
@@ -42,7 +42,7 @@ def plot_deterministic_SIR(t, S, I, R):
     plt.show()
 
 
-plot_deterministic_SIR(*simulate_deterministic_SIR(days=160, N=1000, beta=.3, gamma=.1, I=2))
+#plot_SIR(*simulate_deterministic_SIR(n_days=160, N=1000, beta=.3, gamma=.1, n_infected=2))
 
 ### Stochastic SIR model
 # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7094774/
@@ -64,7 +64,7 @@ def recovery(n_infected, gamma):
     return np.random.binomial(n_infected, recovery_prob(gamma))
 
 
-def simulate(n_days, n_infected, beta, gamma, N):
+def simulate_stochastic_SIR(n_days, n_infected, beta, gamma, N):
     ##Initialize
     n_recovered = 0
     n_susceptible = N - n_infected - n_recovered
@@ -84,10 +84,11 @@ def simulate(n_days, n_infected, beta, gamma, N):
         susceptible.append(n_susceptible)
         recovered.append(n_recovered)
 
-        if n_infected <= 0:
-            break
+        if n_infected < 0:
+            n_infected = 0
+            #break
 
-    return infected, susceptible, recovered
+    return t, np.asarray(susceptible), np.asarray(infected), np.asarray(recovered)
 
 
 def plot_simulation(infected, susceptible, recovered):
@@ -100,7 +101,7 @@ def plot_simulation(infected, susceptible, recovered):
 
 
 def stochastic_SIR(n_days, n_infected, beta, gamma, N):
-    plot_simulation(*simulate(n_days, n_infected, beta, gamma, N))
+    plot_SIR(*simulate_stochastic_SIR(n_days, n_infected, beta, gamma, N))
 
 
-stochastic_SIR(n_days=160, n_infected=2, beta=.3, gamma=.1, N=1000)
+#stochastic_SIR(n_days=160, n_infected=2, beta=.3, gamma=.1, N=1000)

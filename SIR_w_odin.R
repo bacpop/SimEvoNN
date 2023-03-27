@@ -1,5 +1,3 @@
-####FIXME Requires odin.rust to be installed, which is NOT compatible with R3.6.3,
-###FIXME we do not know what is it compatible with, they did not tell
 
 ## Definition of the time-step and output as "time"
 dt <- user(1)
