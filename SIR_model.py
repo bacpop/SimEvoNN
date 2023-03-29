@@ -42,7 +42,8 @@ def plot_SIR(t, S, I, R):
     plt.show()
 
 
-#plot_SIR(*simulate_deterministic_SIR(n_days=160, N=1000, beta=.3, gamma=.1, n_infected=2))
+if __name__ == "__main__":
+    plot_SIR(*simulate_deterministic_SIR(n_days=160, N=1000, beta=.3, gamma=.1, n_infected=2))
 
 ### Stochastic SIR model
 # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7094774/
@@ -64,7 +65,7 @@ def recovery(n_infected, gamma):
     return np.random.binomial(n_infected, recovery_prob(gamma))
 
 
-def simulate_stochastic_SIR(n_days, n_infected, beta, gamma, N):
+def simulate_stochastic_SIR(n_days, n_infected, beta, gamma, N, batch_size=None, random_state=None):
     ##Initialize
     n_recovered = 0
     n_susceptible = N - n_infected - n_recovered
@@ -104,4 +105,67 @@ def stochastic_SIR(n_days, n_infected, beta, gamma, N):
     plot_SIR(*simulate_stochastic_SIR(n_days, n_infected, beta, gamma, N))
 
 
-#stochastic_SIR(n_days=160, n_infected=2, beta=.3, gamma=.1, N=1000)
+if __name__ == "__main__":
+    stochastic_SIR(n_days=160, n_infected=2, beta=.3, gamma=.1, N=50)
+
+
+#### Deterministic SIR model with FW alleles and selection
+"""
+## Infectivity of a pathogen related the Allele that it carries
+## generation of the pathogens should be selected from the infected population
+## to initiate, let's say we have 2 alleles, A,B. A is more infective than the allele B.
+
+infectivity_matrix = np.asarray([[0.4], [0.1]]) ## Infectivity of allele A and B
+## This also means we need to separate the infected population, the one infected with A, and other B.
+#(We may also want to include the population that is infected by both, and by new alleles (mutation))
+
+beta = 0.8
+gamma = 0.02
+n_infected_A = 20
+n_infected_B = 30
+n_infected = n_infected_A + n_infected_B
+infective_efficient_A = 0.9
+infective_efficient_B = 0.1
+N=1000
+n_recovered_A = n_recovered_B = n_recovered = 0
+n_susceptible_A = n_susceptible_B = n_susceptible = N - n_infected_A - n_infected_B
+p_infectivity_A = beta*n_infected_A*infective_efficient_A/N
+p_infectivity_B = beta*n_infected_B*infective_efficient_B/N
+n_days = 365
+
+new_infected_A = np.random.binomial(n_susceptible, p_infectivity_A)
+new_infected_B = np.random.binomial(n_susceptible, p_infectivity_B)
+
+infected, susceptible, recovered = [n_infected], [n_susceptible], [n_recovered]
+
+for day in range(n_days):
+    recovering_A = np.random.binomial(n_infected_A, gamma)
+    recovering_B = np.random.binomial(n_infected_B, gamma)
+    n_recovered_A += recovering_A
+    n_recovered_B += recovering_B
+    new_infected_A = np.random.binomial(n_susceptible_A, p_infectivity_A)
+    new_infected_B = np.random.binomial(n_susceptible_B, p_infectivity_B)
+    n_infected_A += new_infected_A - recovering_A
+    n_infected_B += new_infected_B - recovering_B
+    ###Add interference between strains
+    n_susceptible_A = N - n_infected_A - recovering_A
+    n_susceptible_B = N - n_infected_B - recovering_B
+    #n_susceptible = N - n_infected_B - n_infected_A - recovering_A - recovering_B
+
+    #if n_infected_A + n_infected_B + n_susceptible + n_recovered != N:
+    #    raise ValueError('Population size not conserved')
+
+    if n_susceptible < 0: n_susceptible = 0
+    infected.append(n_infected_A + n_infected_B)
+    susceptible.append(n_susceptible)
+    recovered.append(n_recovered)
+
+
+plot_simulation(infected, susceptible, recovered)
+
+## Later we want to include allele A and B selections from infected population."""
+
+## Try genetic diversity SIR paper:
+## Same guy who introduces ELFI
+### https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2653725/
+
