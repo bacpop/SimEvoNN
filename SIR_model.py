@@ -23,14 +23,14 @@ def simulate_deterministic_SIR(n_days,n_infected, N, beta, gamma):
     return t, S, I, R
 
 
-def plot_SIR(t, S, I, R):
+def plot_SIR(t, S, I, R, N=1000):
     fig = plt.figure(facecolor='w')
     ax = fig.add_subplot(111, facecolor='#dddddd', axisbelow=True)
-    ax.plot(t, S/1000, 'b', alpha=0.5, lw=2, label='Susceptible')
-    ax.plot(t, I/1000, 'r', alpha=0.5, lw=2, label='Infected')
-    ax.plot(t, R/1000, 'g', alpha=0.5, lw=2, label='Recovered with immunity')
+    ax.plot(t, S/N, 'b', alpha=0.5, lw=2, label='Susceptible')
+    ax.plot(t, I/N, 'r', alpha=0.5, lw=2, label='Infected')
+    ax.plot(t, R/N, 'g', alpha=0.5, lw=2, label='Recovered with immunity')
     ax.set_xlabel('Time /days')
-    ax.set_ylabel('Number (1000s)')
+    ax.set_ylabel(f'Number ({N}s)')
     ax.set_ylim(0,1.2)
     ax.yaxis.set_tick_params(length=0)
     ax.xaxis.set_tick_params(length=0)
@@ -65,18 +65,25 @@ def recovery(n_infected, gamma):
     return np.random.binomial(n_infected, recovery_prob(gamma))
 
 
-def simulate_stochastic_SIR(n_days, n_infected, beta, gamma, N, batch_size=None, random_state=None):
+def simulate_stochastic_SIR(n_days, n_infected, beta, gamma, N, lose_immunity=False,gain_immunity=False, batch_size=None, random_state=None):
     ##Initialize
     n_recovered = 0
     n_susceptible = N - n_infected - n_recovered
     infected, susceptible, recovered = [n_infected], [n_susceptible], [n_recovered]
     t = np.linspace(0, n_days, n_days)
+    n_lost_immunity = 0
+    n_gain_immunity = 0
 
     for i in range(1, n_days):
         recovering = recovery(n_infected, gamma)
-        n_recovered += recovering
+        if lose_immunity:
+            n_lost_immunity = np.random.binomial(n_recovered, beta/10)
+        if gain_immunity:
+            n_gain_immunity = np.random.binomial(n_susceptible, gamma*10)
+        n_recovered += recovering - n_lost_immunity + n_gain_immunity
         n_infected += infection(n_infected, n_susceptible, beta, N) - recovering
         n_susceptible = N - n_infected - n_recovered
+
         if n_infected + n_susceptible + n_recovered != N:
             raise ValueError('Population size not conserved')
 
@@ -92,21 +99,16 @@ def simulate_stochastic_SIR(n_days, n_infected, beta, gamma, N, batch_size=None,
     return t, np.asarray(susceptible), np.asarray(infected), np.asarray(recovered)
 
 
-def plot_simulation(infected, susceptible, recovered):
-    days = range(len(infected))
-    plt.plot(days, infected, label='Infected')
-    plt.plot(days, susceptible, label='Susceptible')
-    plt.plot(days, recovered, label='Recovered')
-    plt.legend()
-    plt.show()
-
-
-def stochastic_SIR(n_days, n_infected, beta, gamma, N):
-    plot_SIR(*simulate_stochastic_SIR(n_days, n_infected, beta, gamma, N))
-
-
 if __name__ == "__main__":
-    stochastic_SIR(n_days=160, n_infected=2, beta=.3, gamma=.1, N=50)
+    plot_SIR(*simulate_stochastic_SIR(
+        n_days=160,
+        n_infected=4,
+        beta=.3,
+        gamma=.02,
+        N=100,
+        #lose_immunity=True,
+        #gain_immunity=True
+    ), N=100)
 
 
 #### Deterministic SIR model with FW alleles and selection
@@ -165,7 +167,84 @@ plot_simulation(infected, susceptible, recovered)
 
 ## Later we want to include allele A and B selections from infected population."""
 
+### Vectroized SIR model
+
+def vectorised_SIR_simulator(beta: np.array, gamma: np.array, n_init_infected, N, n_days, n_obs=1, batch_size=1,
+                             random_state=None):
+    # Simulate model
+    #### INITIAL CONDITIONS ####
+    sir_matrix = np.ones([n_days, 3, n_obs]) * np.nan  ## days, [infected, recovered, susceptible], n_obs
+    sir_matrix = sir_matrix.astype(np.int8)
+    sir_matrix[0, 0, :] = n_init_infected
+    sir_matrix[0, 1, :] = 0
+    sir_matrix[0, 2, :] = N - n_init_infected
+
+    random_state = random_state or np.random
+    if len(beta) < n_obs or len(gamma) < n_obs:
+        beta = np.repeat(beta, n_obs)
+        gamma = np.repeat(gamma, n_obs)
+
+    # obs = np.zeros([batch_size, n_obs]).astype(np.int16)
+
+    for i in range(1, n_days):
+        for j in range(n_obs):
+            ## Deterministic model
+            # sir_matrix[i,0,j] = sir_matrix[i-1,0,j] + beta*sir_matrix[i-1,0,j]*sir_matrix[i-1,2,j]/N - gamma*sir_matrix[i-1,0,j]
+            # sir_matrix[i,1,j] = sir_matrix[i-1,1,j] + gamma*sir_matrix[i-1,0,j]
+            # sir_matrix[i,2,j] = sir_matrix[i-1,2,j] - beta*sir_matrix[i-1,0,j]*sir_matrix[i-1,2,j]/N
+
+            ## Stochastic model
+            p_IR = 1 - math.e ** -gamma[j]
+            p_SI = 1 - math.e ** (-beta[j] * sir_matrix[i - 1, 0, j] / N)
+            recovering = random_state.binomial(sir_matrix[i - 1, 0, j], p_IR)
+            sir_matrix[i, 0, j] = sir_matrix[i - 1, 0, j] + random_state.binomial(sir_matrix[i - 1, 2, j],
+                                                                                  p_SI) - recovering
+            sir_matrix[i, 1, j] = sir_matrix[i - 1, 1, j] + recovering
+            sir_matrix[i, 2, j] = N - sir_matrix[i, 0, j] - sir_matrix[i, 1, j]
+
+            assert sir_matrix[i, 1, j] + sir_matrix[i, 0, j] + sir_matrix[i, 2, j] == N, "Population size not conserved"
+
+    return sir_matrix
+
+
 ## Try genetic diversity SIR paper:
 ## Same guy who introduces ELFI
 ### https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2653725/
 
+import math
+
+
+class SIR_Simulator:
+    ##https://mrc-ide.github.io/odin.dust/articles/sir_models.html
+
+    def __init__(self, beta, gamma, N, n_days, n_init_infected,):
+        self.beta = beta
+        self.gamma = gamma
+        self.N = N
+        self.n_days = n_days
+        self.n_recovered = 0
+        self.n_susceptible = N - n_init_infected
+        self.n_infected = n_init_infected
+        self.step = 0
+        self.dt = 0
+
+    def infection_event(self):
+        return np.random.binomial(self.n_susceptible, 1-math.e**(-self.beta*self.dt*self.n_infected/self.N))
+
+    def recovery_event(self):
+        return np.random.binomial(self.n_infected, 1-math.e**(-self.gamma*self.dt))
+
+    def next_event(self):
+        recovering = self.recovery_event()
+        self.n_recovered += recovering
+        self.n_infected += self.infection_event() - recovering
+        self.n_susceptible = self.N - self.n_infected - self.n_recovered
+
+    def time_step(self):
+        self.dt = np.random.exponential(scale=1/self.N)
+        self.step += 1
+
+    def simulate(self):
+        for day in range(self.n_days):
+            self.time_step()
+            self.next_event()
