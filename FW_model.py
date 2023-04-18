@@ -21,6 +21,7 @@ def sim_haploid(n_repeats, n_generations, n_individuals, name):
     plt.title(name)
     plt.show()
 
+
 def plot_multiallele(allele_freq, alleles=None):
     ##Plot the allele frequencies
     #rows=cols=n_alleles//2 + n_alleles%2
@@ -68,7 +69,7 @@ def fisher_wright_simulator(
         allele_freq[0, :, :] /= np.sum(allele_freq[0, :, :], axis=1)[:, None]
 
 
-    ### Set mutation marrix
+    ### Set mutation matrix
     if mutation_rates is None:
         mutation_rates = np.zeros(n_repeats)
     else:
@@ -119,3 +120,191 @@ def jc_mutation_calc(n_alleles, mutation_rates:np.array=None, n_repeats=1):
     set_allele_freq_equal=True
 )"""
 ## Note, adding mutation rate prevents allele extinction or fixation
+
+
+#mutation_rates = {"A": [0.1, 0.2, 0.3, 0.4], "C": [0.1, 0.2, 0.3, 0.4], "G": [0.1, 0.2, 0.3, 0.4], "T": [0.1, 0.2, 0.3, 0.4]}
+#print(mutation_simulator(construct_mutation_matrix(mutation_rates=0.01), ancestral_allele))
+
+
+class FWSim:
+    def __init__(
+            self, initial_allele_seq:list, n_individuals, n_generations,
+            mutation_rates:dict or float=None, max_mutation_size:int=None
+
+    ):
+        self.initial_allele_seq = initial_allele_seq
+        self.n_individuals = n_individuals
+        self.mutation_rates = mutation_rates
+        self.n_alleles = len(initial_allele_seq) if isinstance(initial_allele_seq, list) else 1
+        self.n_generations = n_generations
+        self.max_mutation_size = max_mutation_size if max_mutation_size is not None else 4**len(initial_allele_seq[0])
+
+        self.allele_freq = None
+        self.mutation_matrix = None
+        self.allele_indices = {idx: seq for idx, seq in enumerate(initial_allele_seq)}
+        self.initialize_allele_freq_matrix()
+        self.initialize_mutation_matrix()
+
+    def initialize_allele_freq_matrix(self):
+        self.allele_freq = np.zeros([self.n_generations, self.n_alleles+self.max_mutation_size], dtype=np.float64)
+        self.allele_freq[0, :self.n_alleles] = 1 / self.n_alleles
+
+    def initialize_mutation_matrix(self):
+        if self.mutation_matrix is None:
+            self.mutation_matrix = self.construct_mutation_matrix(self.mutation_rates)
+
+    @staticmethod
+    def construct_mutation_matrix(mutation_rates=None):
+        mutation_matrix = np.zeros([4, 4], dtype=np.float16)
+        if mutation_rates is None:
+            np.fill_diagonal(mutation_matrix, 1)
+        elif isinstance(mutation_rates, float):  ## If one value is given, use it for all nucleotides
+            mutation_matrix.fill(mutation_rates)
+            np.fill_diagonal(mutation_matrix, 1 - mutation_rates * 3)
+        elif isinstance(mutation_rates, dict):
+            for key, value in mutation_rates.items():
+                if key == "A":
+                    mutation_matrix[0, :] = value
+                elif key == "C":
+                    mutation_matrix[1, :] = value
+                elif key == "G":
+                    mutation_matrix[2, :] = value
+                elif key == "T":
+                    mutation_matrix[3, :] = value
+
+        return mutation_matrix
+
+    def simulate_mutation(self, dna_sequence):
+        """
+        :param mutation_matrix: 0 - A, 1 - C, 2 - G, 3 - T
+        :param dna_sequence: sequence of nucleotides
+        :return:
+        """
+
+        out_sequence = ''
+        for idx, nucleotide in enumerate(dna_sequence):
+            if nucleotide == "A":
+                out_sequence += np.random.choice(["A", "C", "G", "T"], p=self.mutation_matrix[0, :])
+            elif nucleotide == "C":
+                out_sequence += np.random.choice(["A", "C", "G", "T"], p=self.mutation_matrix[1, :])
+            elif nucleotide == "G":
+                out_sequence += np.random.choice(["A", "C", "G", "T"], p=self.mutation_matrix[2, :])
+            elif nucleotide == "T":
+                out_sequence += np.random.choice(["A", "C", "G", "T"], p=self.mutation_matrix[3, :])
+            else:
+                raise ValueError("Invalid nucleotide")
+
+        return out_sequence
+
+    @staticmethod
+    def _choose_mutated_alleles(alleles):
+        alleles_len = len(alleles)
+        p_mutate = np.repeat(np.array(1/alleles_len), alleles_len)
+        #if alleles_len > 2:
+        #    return np.random.multinomial(alleles, p_mutate)
+        #else:
+        return np.random.binomial(alleles, p_mutate)
+
+    def _choose_next_alleles(self, allele_freq):
+        return np.random.multinomial(self.n_individuals, allele_freq)
+
+
+    def simulate(self):
+
+        for generation in range(1, self.n_generations):
+
+            #### Obtain how many alleles are selected for the next generation
+            selected_allele_counts = self._choose_next_alleles(self.allele_freq[generation - 1,:])
+
+            if self.n_alleles < self.max_mutation_size:
+
+                ### How many of the alleles are mutated
+                number_of_mutations = self._choose_mutated_alleles(selected_allele_counts[:self.n_alleles])
+
+                ### How mutations occur
+                counts = self.mutation_event(number_of_mutations)
+
+                selected_allele_counts[:self.n_alleles] = selected_allele_counts[:self.n_alleles] - number_of_mutations
+                for allele, counts in counts.items():
+                    _idx = int(self._get_index(allele))
+                    selected_allele_counts[_idx] += counts
+
+            ### Update allele frequency matrix
+            self.allele_freq[generation, :] = selected_allele_counts / self.n_individuals
+
+            self.n_alleles = len(self.allele_indices)
+
+        return self.allele_freq
+
+    def mutation_event(self, number_of_mutations):
+        ### Get new mutations, update allele indices and outputs mutation counts
+
+        no_mutation_counts = {}
+        mutation_counts = {}
+        counts = {}
+        for allele_idx, allele_count in enumerate(number_of_mutations):
+            for c in range(allele_count):
+                ##Simulate mutation to get de-novo sequence
+                mutated_seq = self.simulate_mutation(self.allele_indices[allele_idx])
+                ##Check if the sequence is already in the dictionary
+                if mutated_seq not in self.allele_indices.values():
+                    self.allele_indices[len(self.allele_indices)] = mutated_seq
+                    mutation_counts[mutated_seq] = 1
+                    counts[mutated_seq] = 1
+                    continue
+                if mutated_seq in mutation_counts.keys():
+                    mutation_counts[mutated_seq] += 1
+                    counts[mutated_seq] += 1
+                elif mutated_seq in no_mutation_counts.keys():
+                    no_mutation_counts[mutated_seq] += 1
+                    counts[mutated_seq] += 1
+                else:
+                    no_mutation_counts[mutated_seq] = 1
+                    counts[mutated_seq] = 1
+
+        return counts
+
+    def _get_index(self, sequence):
+        for key, value in self.allele_indices.items():
+            if value == sequence:
+                return key
+
+    def _filter_allele_freq(self, filter_below=0.01):
+        filtering_array = self.allele_freq[self.n_generations-1,:] > filter_below
+        allele_freq = self.allele_freq[:,filtering_array]
+        self._update_allele_indices(filtering_array)
+        self._update_allele_freq(allele_freq)
+        return allele_freq
+
+    def _update_allele_indices(self, array:np.array):
+        updated_allele_indices = {}
+        return_idx_counter = 0
+        for idx, boolean in enumerate(array):
+            if boolean:
+                updated_allele_indices[return_idx_counter] = self.allele_indices[idx]
+                return_idx_counter += 1
+        self.allele_indices = updated_allele_indices
+        return updated_allele_indices
+
+    def _update_allele_freq(self, allele_freq):
+        self.allele_freq = allele_freq
+        return self.allele_freq
+
+    def plot_allele_freq(self, filter_below=0.01):
+        if filter_below:
+            self._filter_allele_freq(filter_below=filter_below)
+
+        plt.figure(figsize=(20, 10))
+        allele_to_plot = self.allele_freq[:, :len(self.allele_indices)]
+        plt.imshow(allele_to_plot, cmap='viridis')
+        plt.xticks(np.arange(len(self.allele_indices)), list(self.allele_indices.values()), rotation=90)
+        plt.xlabel('Alleles')
+        plt.ylabel('Generations')
+        plt.colorbar()
+        plt.show()
+
+
+#ancestral_allele = "AAAATTTTGGGGCCCC"
+#sim = FWSim(initial_allele_seq=['AAGTTC', 'TAAAAC', 'AAATCGAAATGC'], n_individuals=400, n_generations=50, mutation_rates=0.01)
+#sim = FWSim(initial_allele_seq=[ancestral_allele], n_individuals=100, n_generations=50, mutation_rates=0.01, max_mutation_size=100)
+#sim.plot_allele_freq(filter_below=0.00001)
