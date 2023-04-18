@@ -207,6 +207,30 @@ def vectorised_SIR_simulator(beta: np.array, gamma: np.array, n_init_infected, N
     return sir_matrix
 
 
+def plot_sir_matrix(sir_matrix, separate_plots=False):
+    plt.figure(figsize=(10, 5))
+    plt.xlabel('Days')
+    plt.ylabel('Number of people')
+
+    if separate_plots:
+        for i in range(sir_matrix.shape[2]):
+            ax = plt.subplot(2, 3, i + 1)
+            ax.plot(sir_matrix[:, 0, i], label='infected')
+            ax.plot(sir_matrix[:, 1, i], label='recovered')
+            ax.plot(sir_matrix[:, 2, i], label='susceptible')
+    else:
+        ## Plot all in one
+        plt.plot(sir_matrix[:, 0, :], label='infected', c='r', alpha=0.5)
+        plt.plot(sir_matrix[:, 1, :], label='recovered', c='g', alpha=0.5)
+        plt.plot(sir_matrix[:, 2, :], label='susceptible', c='b', alpha=0.5)
+
+    handles, labels = plt.gca().get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    plt.legend(by_label.values(), by_label.keys())
+    plt.show()
+
+
+
 ## Try genetic diversity SIR paper:
 ## Same guy who introduces ELFI
 ### https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2653725/

@@ -103,27 +103,7 @@ import scipy.stats as ss
 
 # print(vectorised_SIR_simulator(0.3, 0.1, 3, 1000, 10, 2))
 
-def plot_sir_matrix(sir_matrix, separate_plots=False):
-    plt.figure(figsize=(10, 5))
-    plt.xlabel('Days')
-    plt.ylabel('Number of people')
-
-    if separate_plots:
-        for i in range(sir_matrix.shape[2]):
-            ax = plt.subplot(2, 3, i + 1)
-            ax.plot(sir_matrix[:, 0, i], label='infected')
-            ax.plot(sir_matrix[:, 1, i], label='recovered')
-            ax.plot(sir_matrix[:, 2, i], label='susceptible')
-    else:
-        ## Plot all in one
-        plt.plot(sir_matrix[:, 0, :], label='infected', c='r', alpha=0.5)
-        plt.plot(sir_matrix[:, 1, :], label='recovered', c='g', alpha=0.5)
-        plt.plot(sir_matrix[:, 2, :], label='susceptible', c='b', alpha=0.5)
-
-    handles, labels = plt.gca().get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
-    plt.legend(by_label.values(), by_label.keys())
-    plt.show()
+from SIR_model import plot_sir_matrix
 
 
 # plot_sir_matrix(vectorised_SIR_simulator([0.3,0.5,0.9], [0.01,0.2,0.7], 5, 50, 100, 3), separate_plots=True)
@@ -288,20 +268,20 @@ def bolfi_sir_trial():
         seed=seed)
 
     # Fit the surrogate model
-    post = bolfi.fit(n_evidence=1200)
-    # post2 = bolfi.extract_posterior(-1.)
+    post = bolfi.fit(n_evidence=200)
+    post2 = bolfi.extract_posterior(-1.)
 
     print(bolfi.target_model)
 
     # Plot the results
-    # bolfi.plot_state()
+    bolfi.plot_state()
     bolfi.plot_discrepancy()
     plt.show()
-    # post.plot(logpdf=True)
-    # post2.plot(logpdf=True)
+    post.plot(logpdf=True)
+    post2.plot(logpdf=True)
 
     ### Sample from the posterior
-    result_BOLFI = bolfi.sample(2000, algorithm='metropolis')
+    result_BOLFI = bolfi.sample(100, algorithm='nuts')
 
     print(result_BOLFI)
 
@@ -310,7 +290,7 @@ def bolfi_sir_trial():
     plt.show()
 
 
-#bolfi_sir_trial()
+bolfi_sir_trial()
 
 ## Fisher Wright model bolfi trial
 from FW_model import fisher_wright_simulator
@@ -402,4 +382,4 @@ def sumarise_mean(allele_freqs, n_alleles, n_batches=1):
     return rv
 
 
-bolfi_FW_trial()
+#bolfi_FW_trial()
