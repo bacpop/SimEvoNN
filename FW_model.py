@@ -208,8 +208,7 @@ class FWSim:
     def _choose_next_alleles(self, allele_freq):
         return np.random.multinomial(self.n_individuals, allele_freq)
 
-
-    def simulate(self):
+    def simulate_population(self):
 
         for generation in range(1, self.n_generations):
 
@@ -235,6 +234,19 @@ class FWSim:
             self.n_alleles = len(self.allele_indices)
 
         return self.allele_freq
+
+    def simulate_individual(self):
+        ## initialize alleles matrix
+        population_matrix = np.zeros([self.n_generations, self.n_individuals], dtype=np.int32)
+        for generation in range(1, self.n_generations):
+            for individual in range(self.n_individuals):
+
+                ## Choose alleles for the next generation
+                population_matrix[generation, individual] = self._choose_next_alleles(self.allele_freq[generation - 1,:])
+                ## Mutate alleles/individuals
+                ###TODO: Implement mutation (Figure out how to do it)
+
+            self.allele_freq[generation, :] = np.sum(population_matrix[generation:]) / self.n_individuals
 
     def mutation_event(self, number_of_mutations):
         ### Get new mutations, update allele indices and outputs mutation counts
@@ -303,8 +315,17 @@ class FWSim:
         plt.colorbar()
         plt.show()
 
+    def write_to_fasta(self, file_name):
+        with open(file_name, 'w') as f:
+            for allele, sequence in self.allele_indices.items():
+                f.write(f'>Sample{allele}\n{sequence}\n')
+
 
 #ancestral_allele = "AAAATTTTGGGGCCCC"
-#sim = FWSim(initial_allele_seq=['AAGTTC', 'TAAAAC', 'AAATCGAAATGC'], n_individuals=400, n_generations=50, mutation_rates=0.01)
+#sim = FWSim(initial_allele_seq=['AAGTTCAAAGTGT', 'AATTTCAAAGTGA', 'AAGAACAAAGTGT'], n_individuals=32, n_generations=16, mutation_rates=0.05, max_mutation_size=400)
+#sim.simulate_population()
+#sim._filter_allele_freq(filter_below=0.01)
+#sim.write_to_fasta("FWsim_trial.fasta")
+
 #sim = FWSim(initial_allele_seq=[ancestral_allele], n_individuals=100, n_generations=50, mutation_rates=0.01, max_mutation_size=100)
 #sim.plot_allele_freq(filter_below=0.00001)
