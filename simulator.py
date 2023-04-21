@@ -1,114 +1,103 @@
 """
-This script contains simulator class for FW and SIR models combined.
+This script contains simulator class for FW with mutations and phylogenetic tree models combined.
 """
 
 import numpy as np
 import math
+from phylogenetic_tree import PhyloTree
+from FW_model import FWSim
+
+import os
+import time
+from config import DATA_PATH, PROJECT_PATH
+from utils import call_subprocess
 
 
 class Simulator:
+    """
+    This simulator class calls FWSim class that takes fasta inputs, runs Fisher-Wright Simulations with infinite mutations
+    (i.e. de novo mutations). From the resulting sequences, an external tool MAPLE is called to construct a phylogenetic tree
+    and from the constructed tree, another class PhyloTree is called to extract tree statistics.
 
-    def __init__(self,
-                 beta, gamma, population_size,
-                 n_days, n_init_infected,
-                 n_alleles,
-                 random_state=None):
+    :param input_fasta: Fasta DNA sequence file ---> will be used as initial sequences for the WF simulations
+    :param n_repeats:  Number of observations to be made
+    :param n_generations:
+    :param n_individuals: population size
+    :param mutation_rate: mutation rate of alleles to be mutated
+    :param max_mutations: maximum allowed mutations during WF simulation
+    :param out_dir: the path in which the results will be saved
+    :return:
+"""
+    def __init__(self, input_fasta:str, n_repeats:int,
+                 n_generations:int, n_individuals:int,
+                 mutation_rate:float, max_mutations:int = None,
+                 out_dir: str = None,
+                 ):
+        self.out_dir = out_dir or os.path.join(DATA_PATH, "simulations", str(time.strftime("%Y%m%d-%H%M")))
+        os.mkdir(self.out_dir) if not os.path.exists(self.out_dir) else None
+        self.in_fasta = input_fasta
+        #self.tree_path = os.path.join(self.out_dir, "alleles.tree")
+        self.out_fasta = None #### Will be set after running FWSim, required to construct the tree
+        self.tree_path = None #### Will be set after running MAPLE
 
-        ## Time parameters
-        self.n_days = n_days
-        self.step = 0
+        self.n_repeats = n_repeats
+        ### Fisher-Wright model parameters
+        self.n_generations = n_generations
+        self.n_individuals = n_individuals
+        self.mutation_rate = mutation_rate
+        self.max_mutations = max_mutations
 
-        ## Other parameters
-        self.random_state = random_state or np.random
+        ### Phylogenetic tree parameters
+        #self.tree_stats = None
+        self.tree_stats_dict = None
 
-        ## SIR model parameters
-        self.beta = beta
-        self.gamma = gamma
-        self.population_size = population_size
-        self.n_recovered = 0
-        self.n_susceptible = population_size - n_init_infected
-        self.n_infected = n_init_infected
-        self.SIR_matrix = self._init_SIR()
+    def run(self):
+        for i in range(self.n_repeats):
+            print(f"Running simulation {i}...")
+            out_sim_dir = os.path.join(self.out_dir, str(f"Sim_{i}"))
+            os.mkdir(out_sim_dir) if not os.path.exists(out_sim_dir) else None
+            self._run_FWSim(out_dir=out_sim_dir)
+            self._run_MAPLE()
+            self._run_PhyloTree(out_sim_dir)
 
-        ## FW model parameters
-        self.n_alleles = n_alleles
-        self.allele_dist_func=None
-        self.allele_freq_matrix = self._init_FW()
+    def _run_FWSim(self, out_dir=None):
+        fwsim =FWSim(
+            n_individuals=self.n_individuals, n_generations=self.n_generations,
+            input_fasta=self.in_fasta, mutation_rates=self.mutation_rate, max_mutation_size=self.max_mutations,
+            outdir=out_dir
+        )
+        fwsim.simulate_population()
+        fwsim.save_simulation()
+
+        #### Sets out fasta that will be used by the MAPLE
+        self.out_fasta = fwsim.out_fasta_path
+
+    def _run_MAPLE(self):
+        ### Run MAPLE through command line
+        maple_script = os.path.join(PROJECT_PATH, "get_maple_tree.sh")
+        working_dir = os.path.dirname(self.out_fasta)
+        fasta_name = os.path.basename(self.out_fasta)
+        call_subprocess("bash", [maple_script, working_dir, fasta_name])
+        self.tree_path = os.path.join(working_dir, "_tree.tree")
+
+    def _run_PhyloTree(self, outdir):
+        ### Construct the tree from the MAPLE output
+
+        phylotree = PhyloTree(tree_path=self.tree_path, tree_format=5)
+        self.tree_stats_dict = phylotree.get_tree_stats()
+        phylotree.save_stats(os.path.join(outdir, 'tree_stats.json'))
+        phylotree.save_tree(os.path.join(outdir, 'tree.png'))
+
+    def _construct_summary_statistics_matrix(self):
+        ### Construct the summary statistics matrix from the tree stats
+        ...
 
 
-    def _init_SIR(self):
-        sir_matrix = np.zeros([self.n_days, 3]).astype(np.int8)  ## days, [infected, recovered, susceptible], ##n_obs
-        sir_matrix[0, 0] = self.n_infected
-        sir_matrix[0, 1] = self.n_recovered
-        sir_matrix[0, 2] = self.population_size - self.n_infected - self.n_recovered
-        return sir_matrix
-
-    def _init_FW(self):
-        self.allele_dist_func = self.random_state.multinomial if self.n_alleles > 2 else self.random_state.binomial
-        allele_fraction_matrix = np.zeros([self.n_days, self.n_alleles]).astype(np.float64)
-        allele_fraction_matrix[0, :] = 1 / self.n_alleles
-        return allele_fraction_matrix
-
-    def update_SIR(self):
-        new_recovered = self.recovery_event()
-        new_infected = self.infection_event()
-        self.n_infected = self.n_infected + new_infected - new_recovered
-        self.n_recovered = self.n_recovered + new_recovered
-        self.n_susceptible = self.population_size - self.n_infected - self.n_recovered
-
-        assert self.n_recovered + self.n_susceptible + self.n_infected == self.population_size, "Population size not conserved"
-
-        self.SIR_matrix[self.step, 0] = self.n_infected
-        self.SIR_matrix[self.step, 1] = self.n_recovered
-        self.SIR_matrix[self.step, 2] = self.n_susceptible
-
-    def _get_p_IR(self, recovery_param=1):
-        return (1 - math.e ** -self.gamma) * recovery_param
-
-    def _get_p_SI(self, infectivity_param=1):
-        return (1 - math.e ** (-self.beta * self.n_infected / self.population_size)) * infectivity_param
-
-    def recovery_event(self):
-        return self.random_state.binomial(self.n_infected, self._get_p_IR())
-
-    def infection_event(self):
-        return self.random_state.binomial(self.n_susceptible, self._get_p_SI())
-
-    def update_FW(self):
-        self.allele_freq_matrix[self.step, :] = self.select_new_generation() / self.n_infected
-        assert math.isclose(1, np.sum(self.allele_freq_matrix[self.step, :]), ), "Allele frequencies do not add up to 1"
-
-    def select_new_generation(self):
-        return self.allele_dist_func(self.n_infected, self._get_allele_probability())
-
-    def _get_allele_probability(self,mutation_coefficient=None,selection_coefficient=None):
-        return self.allele_freq_matrix[self.step-1, :]
-
-    def simulate(self):
-        for day in range(1, self.n_days):
-            self.step = day
-            self.update_FW()
-            self.update_SIR()
-            if self.n_infected == 0:
-                break
-
-from FW_model import plot_multiallele
-from SIR_model import plot_sir_matrix
-
-n_days = 60
-n_alleles = 4
-
-my_sim = Simulator(
-    beta=0.7,
-    gamma=0.1,
-    population_size=100,
-    n_days=n_days,
-    n_init_infected=5,
-    n_alleles=n_alleles
-)
-
-my_sim.simulate()
-
-plot_multiallele(my_sim.allele_freq_matrix.reshape(n_days,1,n_alleles))
-
-plot_sir_matrix(my_sim.SIR_matrix.reshape(n_days,3,1))
+Simulator(
+    input_fasta="/Users/berk/Projects/jlees/data/WF_input.fasta",
+    n_repeats=3,
+    n_generations=20,
+    n_individuals=64,
+    mutation_rate=0.1,
+    max_mutations=500,
+).run()
