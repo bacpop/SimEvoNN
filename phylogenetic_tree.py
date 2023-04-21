@@ -94,8 +94,6 @@ class PhyloTree:
     def _get_bl_median(self):
         self.a_BL_median = sorted(self._leaf_distances)[len(self._leaf_distances) // 2]
 
-
-
     @staticmethod
     def read_tree(newick_tree): ###Taken from PhyloDeep model code
         """ Tries all nwk formats and returns an ete3 Tree
@@ -125,6 +123,14 @@ class PhyloTree:
         if len(nwk) > 1:
             raise ValueError('There are more than 1 tree in the file {}. Now, we accept only one tree per inference.'.format(self.tree_path))
         return self.read_tree(nwk[0] + ';')
+
+    def save_stats(self, path):
+        import json
+        with open(path, "w") as f:
+            json.dump(self.tree_stats, f)
+
+    def save_tree(self, path):
+        self.tree.render(path)
 
 
 
