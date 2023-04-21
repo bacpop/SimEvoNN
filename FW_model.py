@@ -125,13 +125,36 @@ def jc_mutation_calc(n_alleles, mutation_rates:np.array=None, n_repeats=1):
 #mutation_rates = {"A": [0.1, 0.2, 0.3, 0.4], "C": [0.1, 0.2, 0.3, 0.4], "G": [0.1, 0.2, 0.3, 0.4], "T": [0.1, 0.2, 0.3, 0.4]}
 #print(mutation_simulator(construct_mutation_matrix(mutation_rates=0.01), ancestral_allele))
 
+import os
+import time
+from config import DATA_PATH
 
 class FWSim:
+    """
+    Binary representation of nucleotides
+    A=00
+    T=11
+    C=01
+    G=10
+    """
     def __init__(
-            self, initial_allele_seq:list, n_individuals, n_generations,
-            mutation_rates:dict or float=None, max_mutation_size:int=None
+            self, n_individuals, n_generations, initial_allele_seq:list=None,
+            mutation_rates:dict or float=None, max_mutation_size:int=None,
+            convert_to_binary:bool=False, input_fasta:str=None, outdir:str=None
 
     ):
+        self.input_fasta = input_fasta
+        if input_fasta is not None and initial_allele_seq is None:
+            if convert_to_binary:
+                initial_allele_seq = self.convert_fasta_to_binary(input_fasta)
+            else:
+                initial_allele_seq = self.read_fasta(input_fasta)
+
+        self.outdir = outdir if outdir is not None else os.path.join(DATA_PATH, f"FWSim_{time.strftime('%Y%m%d_%H%M')}")
+        self.out_fasta_path = os.path.join(self.outdir, "fw_sequences.fasta")
+        self.out_freq_path = os.path.join(self.outdir, "fw_freq.npy")
+        self.out_parameters_path = os.path.join(self.outdir, "fw_parameters.json")
+
         self.initial_allele_seq = initial_allele_seq
         self.n_individuals = n_individuals
         self.mutation_rates = mutation_rates
@@ -173,6 +196,17 @@ class FWSim:
                     mutation_matrix[3, :] = value
 
         return mutation_matrix
+
+    def simulate_mutation_binary(self,sequence:str):
+        """
+        Selects a random mutation site and changes "1" to "0" or "0" to "1"
+        :param sequence: str
+        :return: str sequence
+        """
+        sequence = list(sequence)
+        mutation_site = np.random.randint(0, len(sequence))
+        sequence[mutation_site] = "0" if sequence[mutation_site] == "1" else "1"
+        return "".join(sequence)
 
     def simulate_mutation(self, dna_sequence):
         """
@@ -302,17 +336,29 @@ class FWSim:
         self.allele_freq = allele_freq
         return self.allele_freq
 
-    def plot_allele_freq(self, filter_below=0.01):
+
+    def save_simulation(self):
+        self.save_parameters(self.out_parameters_path)
+        self.save_allele_freq(self.out_freq_path)
+        self.write_to_fasta(self.out_fasta_path)
+        self.plot_allele_freq(save_fig=True, file_name=os.path.join(self.outdir,'allele_freq.png'), dont_plot=True)
+        #os.replace('allele_freq.png', os.path.join(self.outdir, 'allele_freq.png'))
+
+    def plot_allele_freq(self, filter_below=None, save_fig=True, file_name='allele_freq.png', dont_plot=False):
         if filter_below:
             self._filter_allele_freq(filter_below=filter_below)
 
-        plt.figure(figsize=(20, 10))
+        self._fig = plt.figure(figsize=(20, 10))
         allele_to_plot = self.allele_freq[:, :len(self.allele_indices)]
-        plt.imshow(allele_to_plot, cmap='viridis')
+        self._ax = plt.imshow(allele_to_plot, cmap='viridis')
         plt.xticks(np.arange(len(self.allele_indices)), list(self.allele_indices.values()), rotation=90)
         plt.xlabel('Alleles')
         plt.ylabel('Generations')
         plt.colorbar()
+        if save_fig:
+            plt.savefig(file_name)
+        if dont_plot:
+          return None
         plt.show()
 
     def write_to_fasta(self, file_name):
@@ -320,12 +366,41 @@ class FWSim:
             for allele, sequence in self.allele_indices.items():
                 f.write(f'>Sample{allele}\n{sequence}\n')
 
+    def save_allele_freq(self, file_name):
+        np.save(file_name, self.allele_freq)
+
+    def save_parameters(self, file_name):
+        """Save parameters to a json file"""
+        import json
+        with open(file_name, 'w') as f:
+            json.dump({
+                "initial_allele_seq": self.initial_allele_seq,
+                "n_individuals": self.n_individuals,
+                "n_generations": self.n_generations,
+                "mutation_rates": self.mutation_rates,
+                "max_mutation_size": self.max_mutation_size
+            }, f)
+
+    def read_fasta(self, file_name):
+        rv_list = []
+        with open(file_name, 'r') as f:
+            for line in f:
+                if line.startswith('>'):
+                    continue
+                else:
+                    rv_list.append(line.strip())
+
+        return rv_list
+
 
 #ancestral_allele = "AAAATTTTGGGGCCCC"
 #sim = FWSim(initial_allele_seq=['AAGTTCAAAGTGT', 'AATTTCAAAGTGA', 'AAGAACAAAGTGT'], n_individuals=32, n_generations=16, mutation_rates=0.05, max_mutation_size=400)
+#sim = FWSim(initial_allele_seq=[1010001110011], n_individuals=32, n_generations=16, mutation_rates=0.05, max_mutation_size=400)
+#print(sim.simulate_mutation_binary("1010001110011"))
 #sim.simulate_population()
 #sim._filter_allele_freq(filter_below=0.01)
-#sim.write_to_fasta("FWsim_trial.fasta")
 
 #sim = FWSim(initial_allele_seq=[ancestral_allele], n_individuals=100, n_generations=50, mutation_rates=0.01, max_mutation_size=100)
-#sim.plot_allele_freq(filter_below=0.00001)
+#sim.plot_allele_freq()
+#if input("Save allele frequency? (y/n)") == 'y':
+#    sim.save_simulation()
