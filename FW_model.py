@@ -215,20 +215,23 @@ class FWSim:
         :return:
         """
 
-        out_sequence = ''
-        for idx, nucleotide in enumerate(dna_sequence):
-            if nucleotide == "A":
-                out_sequence += np.random.choice(["A", "C", "G", "T"], p=self.mutation_matrix[0, :])
-            elif nucleotide == "C":
-                out_sequence += np.random.choice(["A", "C", "G", "T"], p=self.mutation_matrix[1, :])
-            elif nucleotide == "G":
-                out_sequence += np.random.choice(["A", "C", "G", "T"], p=self.mutation_matrix[2, :])
-            elif nucleotide == "T":
-                out_sequence += np.random.choice(["A", "C", "G", "T"], p=self.mutation_matrix[3, :])
-            else:
-                raise ValueError("Invalid nucleotide")
+        nucleotides = ["A", "C", "G", "T"]
+        out_sequence = list(dna_sequence)
+        b_loc = np.random.randint(0, len(dna_sequence))
+        nucleotide = out_sequence[b_loc]
 
-        return out_sequence
+        if nucleotide == "A":
+            out_sequence[b_loc] = np.random.choice(nucleotides, p=self.mutation_matrix[0, :])
+        elif nucleotide == "C":
+            out_sequence[b_loc] = np.random.choice(nucleotides, p=self.mutation_matrix[1, :])
+        elif nucleotide == "G":
+            out_sequence[b_loc] = np.random.choice(nucleotides, p=self.mutation_matrix[2, :])
+        elif nucleotide == "T":
+            out_sequence[b_loc] = np.random.choice(nucleotides, p=self.mutation_matrix[3, :])
+        else:
+            raise ValueError("Invalid nucleotide")
+
+        return "".join(out_sequence)
 
     @staticmethod
     def _choose_mutated_alleles(alleles):
