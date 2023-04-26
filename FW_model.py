@@ -182,8 +182,8 @@ class FWSim:
         if mutation_rates is None:
             np.fill_diagonal(mutation_matrix, 1)
         elif isinstance(mutation_rates, float):  ## If one value is given, use it for all nucleotides
-            mutation_matrix.fill(mutation_rates)
-            np.fill_diagonal(mutation_matrix, 1 - mutation_rates * 3)
+            mutation_matrix.fill(mutation_rates/3)
+            np.fill_diagonal(mutation_matrix, 1 - mutation_rates)
         elif isinstance(mutation_rates, dict):
             for key, value in mutation_rates.items():
                 if key == "A":
@@ -194,7 +194,8 @@ class FWSim:
                     mutation_matrix[2, :] = value
                 elif key == "T":
                     mutation_matrix[3, :] = value
-
+        else:
+            raise Exception("Unknown mutation rate. Could not calculate mutation matrix")
         return mutation_matrix
 
     def simulate_mutation_binary(self,sequence:str):
@@ -329,6 +330,8 @@ class FWSim:
         updated_allele_indices = {}
         return_idx_counter = 0
         for idx, boolean in enumerate(array):
+            if len(self.allele_indices) < idx: ###Number of new sequences cannot be more than the indexed sequences
+                break
             if boolean:
                 updated_allele_indices[return_idx_counter] = self.allele_indices[idx]
                 return_idx_counter += 1
@@ -338,7 +341,6 @@ class FWSim:
     def _update_allele_freq(self, allele_freq):
         self.allele_freq = allele_freq
         return self.allele_freq
-
 
     def save_simulation(self):
         self.save_parameters(self.out_parameters_path)
@@ -351,9 +353,9 @@ class FWSim:
         if filter_below:
             self._filter_allele_freq(filter_below=filter_below)
 
-        self._fig = plt.figure(figsize=(20, 10))
+        plt.figure(figsize=(20, 10))
         allele_to_plot = self.allele_freq[:, :len(self.allele_indices)]
-        self._ax = plt.imshow(allele_to_plot, cmap='viridis')
+        plt.imshow(allele_to_plot, cmap='viridis')
         plt.xticks(np.arange(len(self.allele_indices)), list(self.allele_indices.values()), rotation=90)
         plt.xlabel('Alleles')
         plt.ylabel('Generations')
@@ -361,7 +363,8 @@ class FWSim:
         if save_fig:
             plt.savefig(file_name)
         if dont_plot:
-          return None
+            plt.close()
+            return None
         plt.show()
 
     def write_to_fasta(self, file_name):
