@@ -151,22 +151,24 @@ class FWSim:
                 initial_allele_seq = self.read_fasta(input_fasta)
 
         self.outdir = outdir if outdir is not None else os.path.join(DATA_PATH, f"FWSim_{time.strftime('%Y%m%d_%H%M')}")
-        self.out_fasta_path = os.path.join(self.outdir, "fw_sequences.fasta")
-        self.out_freq_path = os.path.join(self.outdir, "fw_freq.npy")
-        self.out_parameters_path = os.path.join(self.outdir, "fw_parameters.json")
 
         self.initial_allele_seq = initial_allele_seq
         self.n_individuals = n_individuals
         self.mutation_rates = mutation_rates
-        self.n_alleles = len(initial_allele_seq) if isinstance(initial_allele_seq, list) else 1
         self.n_generations = n_generations
         self.max_mutation_size = max_mutation_size if max_mutation_size is not None else 4**len(initial_allele_seq[0])
 
+        self.n_alleles = len(initial_allele_seq) if isinstance(initial_allele_seq, list) else 1
         self.allele_freq = None
         self.mutation_matrix = None
         self.allele_indices = {idx: seq for idx, seq in enumerate(initial_allele_seq)}
         self.initialize_allele_freq_matrix()
         self.initialize_mutation_matrix()
+
+    def reset_frequencies(self):
+        self.n_alleles = len(self.initial_allele_seq) if isinstance(self.initial_allele_seq, list) else 1
+        self.allele_indices = {idx: seq for idx, seq in enumerate(self.initial_allele_seq)}
+        self.initialize_allele_freq_matrix()
 
     def initialize_allele_freq_matrix(self):
         self.allele_freq = np.zeros([self.n_generations, self.n_alleles+self.max_mutation_size], dtype=np.float64)
@@ -332,9 +334,11 @@ class FWSim:
         for idx, boolean in enumerate(array):
             if len(self.allele_indices) < idx: ###Number of new sequences cannot be more than the indexed sequences
                 break
-            if boolean:
+
+            if idx < len(self.initial_allele_seq) or boolean:  ### Do not change indices for initial sequences
                 updated_allele_indices[return_idx_counter] = self.allele_indices[idx]
                 return_idx_counter += 1
+
         self.allele_indices = updated_allele_indices
         return updated_allele_indices
 
@@ -342,11 +346,15 @@ class FWSim:
         self.allele_freq = allele_freq
         return self.allele_freq
 
-    def save_simulation(self):
-        self.save_parameters(self.out_parameters_path)
-        self.save_allele_freq(self.out_freq_path)
-        self.write_to_fasta(self.out_fasta_path)
-        self.plot_allele_freq(save_fig=True, file_name=os.path.join(self.outdir,'allele_freq.png'), dont_plot=True)
+    def save_simulation(self, outdir=None, out_fasta_path=None, out_freq_path=None, out_parameters_path=None):
+        outdir = outdir if outdir else self.outdir
+        out_fasta_path = os.path.join(outdir, "fw_sequences.fasta") if not out_fasta_path else out_fasta_path
+        out_freq_path = os.path.join(outdir, "fw_freq.npy") if not out_freq_path else out_freq_path
+        out_parameters_path = os.path.join(outdir, "fw_parameters.json") if not out_parameters_path else out_parameters_path
+        self.save_parameters(out_parameters_path)
+        self.save_allele_freq(out_freq_path)
+        self.write_to_fasta(out_fasta_path)
+        self.plot_allele_freq(save_fig=True, file_name=os.path.join(outdir,'allele_freq.png'), dont_plot=True)
         #os.replace('allele_freq.png', os.path.join(self.outdir, 'allele_freq.png'))
 
     def plot_allele_freq(self, filter_below=None, save_fig=True, file_name='allele_freq.png', dont_plot=False):
