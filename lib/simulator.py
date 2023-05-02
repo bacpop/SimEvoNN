@@ -66,7 +66,14 @@ class Simulator(FWSim, PhyloTree):
         for i in range(self.n_repeats):
             out_sim_dir, sim_number = self._create_new_dir(i)
             print(f"Running simulation {sim_number}...")
-            self._run_FWSim()
+
+            try:
+                self._run_FWSim()
+            except Exception as e:
+                print(f"FWSim failed for {sim_number}", e)
+                shutil.rmtree(out_sim_dir)
+                continue
+
             try: ##FIXME: sometimes Maple cannot construct tree from diverse seqeunces or seqeunce length does not add up
                 self._run_MAPLE()
             except Exception as e:
