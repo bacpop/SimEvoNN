@@ -252,7 +252,13 @@ def max_ladder_il_nodes(tre):
                 max_ladder_score = node.ladder
             if node.ladder > 0:
                 il_nodes += 1
-    return [max_ladder_score / len(tre), il_nodes / (len(tre) - 1)]
+    res = [None, None]
+    try:
+        res = [max_ladder_score / len(tre), il_nodes / (len(tre) - 1)]
+    except ZeroDivisionError as e:
+        print(e)
+    finally:
+        return res
 
 
 def staircaseness(tre):
@@ -271,7 +277,13 @@ def staircaseness(tre):
                 ratio_imbalance.append(len(node.children[1]) / len(node.children[0]))
             else:
                 ratio_imbalance.append(len(node.children[0]) / len(node.children[1]))
-    return [nb_imbalanced_in / (len(tre) - 1), np.mean(ratio_imbalance)]
+    res = [None, None]
+    try:
+        res = [nb_imbalanced_in / (len(tre) - 1), np.mean(ratio_imbalance)]
+    except ZeroDivisionError as e:
+        print(e)
+    finally:
+        return res
 
 
 def ltt_plot(tre):
