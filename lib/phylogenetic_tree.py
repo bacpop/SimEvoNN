@@ -96,7 +96,7 @@ class PhyloTree:
         #self.all_bl_mean, self.all_bl_median, self.all_bl_var, self.ext_bl_mean, self.ext_bl_median, self.ext_bl_var = None, None, None, None, None, None
 
     def reset_tree(self):
-        self.tree_stats = None
+        self.tree_stats = np.zeros(len(self.tree_stats_idx))
         self.tree = self.read_tree(self.tree_path)
 
     def get_tree_stats(self):
@@ -229,18 +229,3 @@ class PhyloTree:
     def save_tree(self, path):
         self.tree.render(path)
 
-
-
-#instr = "((Sample1:0.0,Sample0:0.09333496093749999):0.1,(Sample2:0.1,Sample3:0.0):0.1):1.0;"
-phyltree = PhyloTree(
-    tree_path="/Users/berk/Projects/jlees/data/TrueValues/_tree.tree"
-)
-
-print(
-#    phyltree.get_summary_statistics()
-)
-
-#print(phyltree.get_tree_stat("delta_w"))
-#phyltree.get_tree_stats()
-#print(phyltree.tree_stats)
-#phyltree.tree.render("tryandcry.png")
