@@ -137,6 +137,7 @@ class FWSim:
     C=01
     G=10
     """
+
     def __init__(
             self, n_individuals, n_generations, initial_allele_seq:list=None,
             mutation_rates:dict or float=None, max_mutation_size:int=None,
@@ -165,6 +166,7 @@ class FWSim:
         self.initialize_allele_freq_matrix()
         self.initialize_mutation_matrix()
 
+
     def reset_frequencies(self):
         self.n_alleles = len(self.initial_allele_seq) if isinstance(self.initial_allele_seq, list) else 1
         self.allele_indices = {idx: seq for idx, seq in enumerate(self.initial_allele_seq)}
@@ -177,6 +179,9 @@ class FWSim:
     def initialize_mutation_matrix(self):
         if self.mutation_matrix is None:
             self.mutation_matrix = self.construct_mutation_matrix(self.mutation_rates)
+
+    def get_allele_summary_stats(self):
+        pass
 
     @staticmethod
     def construct_mutation_matrix(mutation_rates=None):
@@ -275,7 +280,7 @@ class FWSim:
 
         return self.allele_freq
 
-    def simulate_individual(self):
+    def simulate_individual(self): ##TODO: Non-functional
         ## initialize alleles matrix
         population_matrix = np.zeros([self.n_generations, self.n_individuals], dtype=np.int32)
         for generation in range(1, self.n_generations):
@@ -340,6 +345,7 @@ class FWSim:
                 return_idx_counter += 1
 
         self.allele_indices = updated_allele_indices
+        self.n_alleles = len(self.allele_indices)
         return updated_allele_indices
 
     def _update_allele_freq(self, allele_freq):
@@ -406,15 +412,3 @@ class FWSim:
 
         return rv_list
 
-
-#ancestral_allele = "AAAATTTTGGGGCCCC"
-#sim = FWSim(initial_allele_seq=['AAGTTCAAAGTGT', 'AATTTCAAAGTGA', 'AAGAACAAAGTGT'], n_individuals=32, n_generations=16, mutation_rates=0.05, max_mutation_size=400)
-#sim = FWSim(initial_allele_seq=[1010001110011], n_individuals=32, n_generations=16, mutation_rates=0.05, max_mutation_size=400)
-#print(sim.simulate_mutation_binary("1010001110011"))
-#sim.simulate_population()
-#sim._filter_allele_freq(filter_below=0.01)
-
-#sim = FWSim(initial_allele_seq=[ancestral_allele], n_individuals=100, n_generations=50, mutation_rates=0.01, max_mutation_size=100)
-#sim.plot_allele_freq()
-#if input("Save allele frequency? (y/n)") == 'y':
-#    sim.save_simulation()
