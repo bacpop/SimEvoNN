@@ -12,7 +12,7 @@ class Alleles(FWSim):
         'f_st':3,
         'f_is':4,
         'entropy':5,
-        'gc_content':6,
+        'delta_gc_content':6,
         'n_segregating_sites':7,
         'n_variants':8,
         'n_haplotypes':9,
@@ -21,10 +21,12 @@ class Alleles(FWSim):
         'h123':12,
         'h2_h1':13,
         'haplotype_diversity':14,
-        'max_allele_freq':15,
-        'min_allele_freq':16,
-        'mean_allele_freq':17,
-        'median_allele_freq':18,
+        'allele_freq_max':15,
+        'allele_freq_min':16,
+        'allele_freq_mean':17,
+        'allele_freq_median':18,
+        'allele_freq_var':19,
+        'ihs':20,
     }
     def __init__(self,
                  *params, **kwargs):
@@ -39,14 +41,6 @@ class Alleles(FWSim):
         self.allele_counts_array = None
         self.n_variants = None
         self.n_haplotypes = None
-        self.pi = None
-        self.watterson_theta = None
-        self.h1 = None
-        self.h12 = None
-        self.h123 = None
-        self.h2_h1 = None
-        self.ihs = None
-        self.tajimas_d = None
 
         self.allele_stats = np.zeros(len(self.allele_stats_indices))
 
@@ -90,27 +84,32 @@ class Alleles(FWSim):
         summaries.append(self.calculate_wattersons_theta())
 
         ## Add Tajima's D
-        #summaries.append(self.calculate_tajimas_d())
-        summaries.append(None)
+        summaries.append(self.calculate_tajimas_d())
 
         ## Calculate Fst
-        summaries.append(None)
+        summaries.append(self.calculate_fst())
         ## Calculate Fis
-        summaries.append(None)
+        summaries.append(self.calculate_fis())
         ## Calculate enthropy
         summaries.append(None)
         ## Calculate GC content
-        summaries.append(None)
+        summaries.append(self.calculate_delta_gc_content())
         ## Calculate number of segregating sites
         summaries.append(None)
         ## Add counts of alleles, variants and haplotypes
         summaries.extend([self.n_variants, self.n_haplotypes])
         ## Add haplotype statistics
-        summaries.extend(self.calculate_garuds_h())
+        summaries.extend([*self.calculate_garuds_h()])
         ## Add haplotype diversity
         summaries.append(self.calculate_haplotype_diversity())
-        ## Add max, min, mean, median allele frequencies
-        summaries.extend([np.max(self.allele_freq), np.min(self.allele_freq), np.mean(self.allele_freq), np.median(self.allele_freq)])
+        ## Add max, min, mean, median, variance of allele frequencies
+        summaries.extend([
+            np.max(self.allele_freq), np.min(self.allele_freq),
+            np.mean(self.allele_freq), np.median(self.allele_freq),
+            np.var(self.allele_freq)
+        ])
+        ## Add ihs
+        summaries.append(self.calculate_ihs())
 
         self.allele_stats[:] = np.array(summaries)
         return self.allele_stats
@@ -136,17 +135,37 @@ class Alleles(FWSim):
         return allel.tajima_d(self.allele_counts_array)
 
     def calculate_fst(self):
-        ## Calculate Fst
+        ## Calculate Fst between all pairs of populations
+        #allel.stats.diversity.fst(self.haplotype_array)
+        return None
+
+    def calculate_fis(self):
+        ## Calculate Fis
+        #return allel.inbreeding_coefficient(self.haplotype_array)
+        return None
+
+    def calculate_delta_gc_content(self):
+        ## Calculate GC content
+        return sum(var_list.count('g') + var_list.count('c') for var_list in self.variants_dict.values())/self.n_variants
+
+    def calculate_entropy(self):
+        ## Calculate entropy
+        #return allel.sequence.entropy(self.haplotype_array)
         return None
     def calculate_ihs(self):
         ## Calculate integrated haplotype score
-        #self.ihs = allel.ihs(self.haplotype_array, self._get_positions())
-        return self.ihs
+        ## Looks for homozygosity!!
+        return None
+        ihs = None
+        try:
+            ihs = allel.ihs(self.haplotype_array, self._get_positions())
+        except ValueError as e:
+            print("ihs cannot be calculated", e)
+        return ihs
 
     def calculate_garuds_h(self):
         ## Calculate Garud's H
-        self.h1, self.h12, self.h123, self.h2_h1 = allel.garud_h(self.haplotype_array)
-        return self.h1, self.h12, self.h123, self.h2_h1
+        return allel.garud_h(self.haplotype_array)
     def _generate_haplotype_array(self):
         self.haplotype_array = allel.HaplotypeArray(self.sequences_mut_array.T, dtype='i1')
 
@@ -168,11 +187,10 @@ class Alleles(FWSim):
                     elif pline[0] in {'a', 'c', 'g', 't'}:
                         nucleotide, position = pline.split('\t')
                         position = int(position) -1 ## 0-based indexing for mutation array
-                        if nucleotide not in self.variants_dict[position]:
-                            self.variants_dict.setdefault(position, []).append(nucleotide)
-                        self.sequences_mut_array[seq_id, position] = self.variants_dict[position].index(nucleotide)
+                        self.variants_dict.setdefault(position, []).append(nucleotide) ## We can add each nucleotide to get counts
+                        self.sequences_mut_array[seq_id, position] = self.variants_dict[position].index(nucleotide) ## Index method always returns the first encounter
 
-            return self.sequences_mut_array
+        return self.sequences_mut_array
 
     def _get_counts(self):
         if all([self.allele_counts_array, self.n_variants, self.n_haplotypes]):
@@ -191,15 +209,8 @@ class Alleles(FWSim):
 
 
 
-"""
-allele_indices = {0: 'AAAATTTTGGGGCCCC', 1: 'AAAATTTTGGAGCCCC', 2: 'AAAATTTTGGGGCGCC', 3: 'AAAATTGTGGGGCCCC', 4: 'AAAATTTTGGTGCCCC', 5: 'AAAATTTTGGGGCCCG', 6: 'AAAATTATGGGGCCCC', 7: 'AAAATTTTAGGGCCCC', 8: 'AAAATTTTGGGGCCCA', 9: 'AATATTTTGGGGCGCC', 10: 'AAGATTTTGGTGCCCC', 11: 'AAAATTTTGGGGACCG', 12: 'AAAATATTGGGGCCCG', 13: 'ACAATTTTGGGGCCCG', 14: 'AAAATTTTGGTGCACC', 15: 'AAAATTTTGAGGACCG', 16: 'TAAATTTTGGGGACCG', 17: 'TAAATTTTGGGTACCG', 18: 'AAAGTTTTGGGGACCG', 19: 'AAAAGTTTGGGGACCG', 20: 'ATAATTTTGGGGACCG', 21: 'AAAATTTTAGGGACCG', 22: 'AAAATTGTCGGGCCCC', 23: 'AATATTGTGGGGCCCC', 24: 'AAAGTTTTGGGTACCG', 25: 'AAAATTTTGGGGTCCG', 26: 'AAAATTTTGGGGACTG', 27: 'AAAATTTTGGCGACCG'}
-maple_file = '/Users/berk/Projects/jlees/data/TrueValues/temp_FWsim.txt'
-
-al = Alleles(allele_indices, maple_file)
-
-
-print(
-    al.calculate_divergence(),
-    al.calculate_haplotype_diversity(),
-    al.calculate_garuds_h(),
-)"""
+### Some sum stats for inferring selection -->
+# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7177178/
+# dN/dS ratio , McDinald-Kreitman test,  Hudson-Kreitman-Aguadé (HKA) test
+### Haplotype- and SFS-based summary statistics:
+#  Tajima's D, Θw, ΘH,

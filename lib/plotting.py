@@ -79,3 +79,4 @@ for idx_name, idx in indices.items():
 
 np.save(os.path.join(outdir, "simulation_results.npy"), m)
 
+## TODO: 1-add more stats, 2-analise which stats more informative,(PCA, correlation, etc.) 3- Deep Learning project
