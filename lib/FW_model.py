@@ -1,10 +1,10 @@
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 def sim_haploid(n_repeats, n_generations, n_individuals, name):
     #Biallele (Haploid) model (Fisher-Wright)
+    import matplotlib.pyplot as plt
     b_freq = np.zeros([n_generations, n_repeats])
 
     # Set the initial condition at the first step
@@ -364,6 +364,7 @@ class FWSim:
         #os.replace('allele_freq.png', os.path.join(self.outdir, 'allele_freq.png'))
 
     def plot_allele_freq(self, filter_below=None, save_fig=True, file_name='allele_freq.png', dont_plot=False):
+        import matplotlib.pyplot as plt
         if filter_below:
             self._filter_allele_freq(filter_below=filter_below)
 

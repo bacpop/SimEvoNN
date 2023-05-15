@@ -29,3 +29,19 @@ def call_subprocess(command: str, params: list, outfile=None, chdir=None):
         raise Exception(full_command, stdout, stderr)
     retstdout = stdout.decode() if stdout is not None else None
     return return_code, retstdout
+
+
+def run_maple(input_fasta_path):
+    import MAPLE
+    import tempfile
+    import os
+    input_dir= os.path.dirname(input_fasta_path)
+    input_fasta= os.path.basename(input_fasta_path)
+    ### First create a Maple VCF format
+    temp_maple_file = tempfile.mktemp(suffix=".txt", prefix="WF_sim", dir=input_dir)
+    call_subprocess("pypy", [MAPLE.createMapleFile, "--path", f"{input_dir}/", "--fasta", input_fasta, "--overwrite", "--output", os.path.basename(temp_maple_file)])
+    ### Then construct a tree
+    call_subprocess("pypy", [MAPLE.run_Maple, "--input", temp_maple_file, "--output", f"{input_dir}/", "--overwrite"])
+
+    tree_path = os.path.join(input_dir, "_tree.tree")
+    return tree_path, temp_maple_file

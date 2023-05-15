@@ -10,8 +10,8 @@ from lib.alleles import Alleles
 
 import os
 import time
-from config import DATA_PATH, PROJECT_PATH
-from utils import call_subprocess
+from config import DATA_PATH
+from utils import run_maple
 
 
 class Simulator(Alleles, PhyloTree):
@@ -91,6 +91,7 @@ class Simulator(Alleles, PhyloTree):
                 print(f"Maple failed for {sim_number}", e)
                 shutil.rmtree(out_sim_dir)
                 continue
+
             ##Calculate allele statistics from Maple file and allele freqs of FWsim
             self._run_Alleles()
 
@@ -126,12 +127,8 @@ class Simulator(Alleles, PhyloTree):
         self.write_to_fasta(self.out_fasta)
 
     def _run_MAPLE(self):
-        ### Run MAPLE through command line
-        maple_script = os.path.join(PROJECT_PATH, "get_maple_tree.sh")
-        fasta_name = os.path.basename(self.out_fasta)
-        call_subprocess("bash", [maple_script, self.work_dir, fasta_name])
-        self.tree_path = os.path.join(self.work_dir, "_tree.tree")
-        self.maple_sequences_path = os.path.join(self.work_dir, "temp_FWsim.txt")
+        ### Run MAPLE
+        self.tree_path, self.maple_sequences_path = run_maple(self.out_fasta)
 
     def _run_PhyloTree(self):
         ### Construct the tree from the MAPLE output and get summary statistics

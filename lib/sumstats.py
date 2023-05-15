@@ -1,6 +1,5 @@
 import numpy as np
 
-from scipy.stats import linregress
 from math import floor
 
 DISTANCE_TO_ROOT = "dist_to_root"
@@ -317,6 +316,7 @@ def ltt_plot_comput(event_mat):
     :param event_mat: np.matrix, branching and removal events
     :return: set of 9 floats, LTT plot based metrics
     """
+    from scipy.stats import linregress
     # PART1 find max and max time of LTT plot
     events = event_mat.copy()
     max_lineages = 0
