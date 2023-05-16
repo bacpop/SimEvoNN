@@ -1,3 +1,8 @@
+import logging
+import time
+logger = logging.getLogger(f'WFsim_{time.strftime("%Y%m%d-%H%M")}')
+logger.setLevel(logging.ERROR)
+
 
 def run_simulator(args):
     from lib.simulator import simulator
@@ -37,7 +42,7 @@ def run_simulator(args):
 
             )
         except Exception as e:
-            print(e)
+            logger.error(f"Simulation {sim_idx} failed with error: {e}")
             continue
 
 
@@ -54,6 +59,8 @@ def run_simulator(args):
             shutil.copyfileobj(np_in, np_out)
         with gzip.open(f'{pd_path}.gz', 'wb') as pd_out:
             shutil.copyfileobj(pd_in, pd_out)
+    os.remove(numpy_path)
+    os.remove(pd_path)
 
 
 if __name__ == '__main__':
