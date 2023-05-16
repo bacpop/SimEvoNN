@@ -100,7 +100,6 @@ def plot_distances(res, par_to_estimate):
 import elfi
 import scipy.stats as ss
 
-
 # print(vectorised_SIR_simulator(0.3, 0.1, 3, 1000, 10, 2))
 
 from SIR_model import plot_sir_matrix
@@ -290,7 +289,7 @@ def bolfi_sir_trial():
     plt.show()
 
 
-bolfi_sir_trial()
+# bolfi_sir_trial()
 
 ## Fisher Wright model bolfi trial
 from FW_model import fisher_wright_simulator
@@ -303,7 +302,7 @@ def bolfi_FW_trial():
     model = create_elfi_model_FW(mutation_true=0.1, n_individuals=100, n_generations=50,
                                  number_of_batches=1, n_alleles=2)
 
-    #elfi.draw(model, filename="./bolfi_FW")
+    # elfi.draw(model, filename="./bolfi_FW")
 
     ## Take the log of the distance to reduce the influence of outliers on Gaussian Process
     log_distance = elfi.Operation(np.log, model)
@@ -312,11 +311,11 @@ def bolfi_FW_trial():
     bolfi = elfi.BOLFI(
         log_distance, batch_size=1, initial_evidence=30,
         update_interval=1, bounds={'mutation': (0.0, 0.5)},
-        seed=seed, acq_noise_var=[0.0, 0.0])
+        seed=seed, )#acq_noise_var=[0.0, 0.0])
 
     # Fit the surrogate model
     post = bolfi.fit(n_evidence=1200)
-    # post2 = bolfi.extract_posterior(-1.)
+    post2 = bolfi.extract_posterior(-1.)
 
     print(bolfi.target_model)
 
@@ -383,3 +382,218 @@ def sumarise_mean(allele_freqs, n_alleles, n_batches=1):
 
 
 #bolfi_FW_trial()
+
+
+from typing import Callable, Dict, List, Optional, Tuple, Union
+import tempfile
+
+from lib.phylogenetic_tree import PhyloTree
+
+class BOLFI4WF:
+
+    def __init__(self, simulator_function: Callable, function_params: List, prior_params: Dict,
+                 number_of_batches=1, observed_data=None, random_state=None, model=None,
+                 filter_allele_freq_below:float=0.0, bounds=None,
+                 initial_evidence=30, update_interval=1,n_evidence=100, acq_noise_var=0.0, n_post_samples=10,
+                 _seed=1, distance_name="euclidean", sampling_algorithm="metropolis",
+                 work_dir = None, save_simulations=False):
+
+        ###Others
+        self._seed = _seed
+        np.random.seed(self._seed)
+        self._work_dir = work_dir if work_dir is not None else tempfile.mkdtemp()
+        self.save_simulations = save_simulations
+        #elfi.set_client("multiprocessing")
+
+        ##Simulator model
+        self.simulator_function = simulator_function
+        self.function_params = function_params
+        self.prior_params = prior_params
+        self.priors = self.create_priors()
+        self.filter_allele_freq_below = filter_allele_freq_below
+
+        ### Wright-Fisher Parameters to be estimated
+        # self.Ne = Ne # Effective population size,
+        # self.mutation_rate = mutation_rate
+
+        ### Observed/Real data to be used
+        self.observed_data = observed_data
+
+        ### ELFI tool parameters
+        self.number_of_batches = number_of_batches
+        self.random_state = random_state or np.random
+
+        ### BOLFI Model to be used, if None then create a new one
+        self.model = model if model is not None else self.create_elfi_model()
+        self.summaries = None
+        self.distance_name = distance_name
+        self.sampling_algorithm = sampling_algorithm
+        self.distance = None
+
+        ##Bolfi inference params
+        self.initial_evidence = initial_evidence
+        self.update_interval = update_interval
+        self.n_evidence = n_evidence
+        self.acq_noise_var = acq_noise_var
+        self.bounds = bounds
+        self.n_post_samples:int = n_post_samples
+
+    def run_bolfi(self):
+        self.get_elfi_summary_statistics()
+        self.get_elfi_distance()
+        self.get_bolfi_inference_model()
+
+    def create_priors(self):
+        prior_objs: List[elfi.Prior] = []
+        for param_name, param in self.prior_params.items():
+            prior_objs.append(elfi.Prior(param["distribution"], param["min"], param["max"], name=param_name))
+        return prior_objs
+
+    def create_elfi_model(self, name=None):
+
+        ##n_repeats, n_generations, n_individuals, n_alleles=None,alleles=None, mutation_rates:np.array=None,
+        # Add the simulator node and observed data to the model
+        return elfi.Simulator(
+            self.simulator_function,
+            *self.priors,
+            *self.function_params,
+            self._work_dir,
+            self.save_simulations,
+            self.filter_allele_freq_below,
+            self.number_of_batches,
+            observed=self.observed_data,
+            name=name,
+        )
+
+    def get_elfi_summary_statistics(self, stats_to_summarise=None):
+        sumstats = list(PhyloTree.tree_stats_idx.keys()) if stats_to_summarise is None else stats_to_summarise
+        self.summaries = [elfi.Summary(self._get_summary_column, self.model, stat_key, name=stat_key) for stat_key in
+                          sumstats]
+
+    def get_elfi_distance(self):
+        self.distance = elfi.Distance(self.distance_name, *self.summaries)
+
+    def get_bolfi_inference_model(self):
+        log_distance = self._log_distance()
+
+        bounds = self.bounds or self._get_bounds_from_priors()
+        # Set up the inference method
+        bolfi = elfi.BOLFI(#self.model,
+            log_distance,
+            batch_size=self.number_of_batches,
+            initial_evidence=self.initial_evidence,
+            update_interval=self.update_interval, bounds=bounds,
+            seed=self._seed, acq_noise_var=self.acq_noise_var
+        )
+
+        # Fit the surrogate model
+        post = bolfi.fit(n_evidence=self.n_evidence)
+        post2 = bolfi.extract_posterior(-1.)
+
+        print(bolfi.target_model)
+
+        # Plot the results
+        bolfi.plot_state()
+        bolfi.plot_discrepancy()
+        plt.show()
+        #post.plot(logpdf=True)
+        #post2.plot(logpdf=True)
+
+        ### Sample from the posterior
+        result_BOLFI = bolfi.sample(self.n_post_samples, algorithm=self.sampling_algorithm)
+
+        print(result_BOLFI)
+        ### TODO: add methods for saving plots and model fit
+        result_BOLFI.plot_traces()
+        result_BOLFI.plot_marginals()
+        plt.show()
+        elfi.ElfiModel.save(self.model,self._work_dir)
+
+    def _get_bounds_from_priors(self):
+        return {p_name: (p["min"], p["max"]) for p_name, p in self.prior_params.items()}
+
+    def _log_distance(self):
+        ## Take the log of the distance to reduce the influence of outliers on Gaussian Process
+        return elfi.Operation(np.log, self.distance)
+
+    def _get_observed_data(self, **kwargs):
+        return self.simulator_function(**kwargs)
+
+    @staticmethod
+    def _get_summary_column(y, column):
+        #indices_dict = {"max_H" : 0, "min_H": 1, "a_BL_mean": 2, "a_BL_median": 3}
+        indices_dict = PhyloTree.tree_stats_idx
+        #return np.array([y[0][column]])
+        y = y.reshape([1, len(indices_dict)])
+        return y[0,indices_dict[column]]
+
+
+##True inputs
+#{"initial_allele_seq": ["AAGTTCAAAGTGT"], "n_individuals": 100, "n_generations": 20, "mutation_rates": 0.6, "max_mutation_size": 100}
+
+##Outputs
+{"max_H": 0.2352274456166919, "min_H": 0.0, "a_BL_mean": 0.08888538418754201, "a_BL_median": 0.08632864864667722}
+
+import json
+tru_f = '/Users/berk/Projects/jlees/data/simulations/20230428-1653/Sim_99/tree_stats.json'
+with open(tru_f) as fh:
+    tru_dict = json.load(fh)
+
+observed = np.zeros([1, len(list(tru_dict.values()))])
+observed[0,:] = np.array(list(tru_dict.values()))
+"""observed = np.array([0.2352274456166919, 0.0, 0.08888538418754201, 0.08632864864667722], dtype=
+[
+    ("max_H", np.float64),
+    ("min_H", np.float64),
+    ("a_BL_mean", np.float64),
+    ("a_BL_median", np.float64),
+])
+"""
+
+from lib.simulator import simulator
+from config import DATA_PATH
+import os
+import time
+
+workdir = os.path.join(DATA_PATH, "BOLFI", "simulations",  str(time.strftime("%Y%m%d-%H%M")))
+
+prior_params = {
+    "Ne": {"distribution": "uniform", "min": 10, "max": 200},
+    "mutation_rate": {"distribution": "uniform", "min": 0.0, "max": 1.0},
+}
+
+##### input_fasta, n_generations, max_mutations
+function_params = ["/Users/berk/Projects/jlees/data/WF_input.fasta", 20, 100]
+batch_size = 1
+
+bolfi_wf = BOLFI4WF(
+    ## Simulator params
+    simulator_function=elfi.tools.vectorize(simulator),
+    function_params=function_params,
+    prior_params=prior_params,
+    filter_allele_freq_below=0.001,
+    observed_data=observed,
+    ## Bolfi params
+    initial_evidence=50,
+    update_interval=5,
+    n_evidence=200,
+    acq_noise_var=0.0,
+    bounds=None,
+    n_post_samples=100,
+    ###Misc
+    number_of_batches=batch_size,
+    work_dir=workdir,
+    save_simulations=False,
+)
+
+bolfi_wf.run_bolfi()
+
+
+"""print(
+    simulator(
+        100, 0.6,
+        *function_params,
+        batch_size=10,
+        save_data=True
+    )
+)"""

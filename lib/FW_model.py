@@ -1,10 +1,10 @@
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 def sim_haploid(n_repeats, n_generations, n_individuals, name):
     #Biallele (Haploid) model (Fisher-Wright)
+    import matplotlib.pyplot as plt
     b_freq = np.zeros([n_generations, n_repeats])
 
     # Set the initial condition at the first step
@@ -125,25 +125,52 @@ def jc_mutation_calc(n_alleles, mutation_rates:np.array=None, n_repeats=1):
 #mutation_rates = {"A": [0.1, 0.2, 0.3, 0.4], "C": [0.1, 0.2, 0.3, 0.4], "G": [0.1, 0.2, 0.3, 0.4], "T": [0.1, 0.2, 0.3, 0.4]}
 #print(mutation_simulator(construct_mutation_matrix(mutation_rates=0.01), ancestral_allele))
 
+import os
+import time
+from config import DATA_PATH
 
 class FWSim:
+    """
+    Binary representation of nucleotides
+    A=00
+    T=11
+    C=01
+    G=10
+    """
+
     def __init__(
-            self, initial_allele_seq:list, n_individuals, n_generations,
-            mutation_rates:dict or float=None, max_mutation_size:int=None
+            self, n_individuals, n_generations, initial_allele_seq:list=None,
+            mutation_rates:dict or float=None, max_mutation_size:int=None,
+            convert_to_binary:bool=False, input_fasta:str=None, outdir:str=None
 
     ):
+        self.input_fasta = input_fasta
+        if input_fasta is not None and initial_allele_seq is None:
+            if convert_to_binary:
+                initial_allele_seq = self.convert_fasta_to_binary(input_fasta)
+            else:
+                initial_allele_seq = self.read_fasta(input_fasta)
+
+        self.outdir = outdir if outdir is not None else os.path.join(DATA_PATH, f"FWSim_{time.strftime('%Y%m%d_%H%M')}")
+
         self.initial_allele_seq = initial_allele_seq
         self.n_individuals = n_individuals
         self.mutation_rates = mutation_rates
-        self.n_alleles = len(initial_allele_seq) if isinstance(initial_allele_seq, list) else 1
         self.n_generations = n_generations
         self.max_mutation_size = max_mutation_size if max_mutation_size is not None else 4**len(initial_allele_seq[0])
 
+        self.n_alleles = len(initial_allele_seq) if isinstance(initial_allele_seq, list) else 1
         self.allele_freq = None
         self.mutation_matrix = None
         self.allele_indices = {idx: seq for idx, seq in enumerate(initial_allele_seq)}
         self.initialize_allele_freq_matrix()
         self.initialize_mutation_matrix()
+
+
+    def reset_frequencies(self):
+        self.n_alleles = len(self.initial_allele_seq) if isinstance(self.initial_allele_seq, list) else 1
+        self.allele_indices = {idx: seq for idx, seq in enumerate(self.initial_allele_seq)}
+        self.initialize_allele_freq_matrix()
 
     def initialize_allele_freq_matrix(self):
         self.allele_freq = np.zeros([self.n_generations, self.n_alleles+self.max_mutation_size], dtype=np.float64)
@@ -153,14 +180,17 @@ class FWSim:
         if self.mutation_matrix is None:
             self.mutation_matrix = self.construct_mutation_matrix(self.mutation_rates)
 
+    def get_allele_summary_stats(self):
+        pass
+
     @staticmethod
     def construct_mutation_matrix(mutation_rates=None):
         mutation_matrix = np.zeros([4, 4], dtype=np.float16)
         if mutation_rates is None:
             np.fill_diagonal(mutation_matrix, 1)
         elif isinstance(mutation_rates, float):  ## If one value is given, use it for all nucleotides
-            mutation_matrix.fill(mutation_rates)
-            np.fill_diagonal(mutation_matrix, 1 - mutation_rates * 3)
+            mutation_matrix.fill(mutation_rates/3)
+            np.fill_diagonal(mutation_matrix, 1 - mutation_rates)
         elif isinstance(mutation_rates, dict):
             for key, value in mutation_rates.items():
                 if key == "A":
@@ -171,8 +201,20 @@ class FWSim:
                     mutation_matrix[2, :] = value
                 elif key == "T":
                     mutation_matrix[3, :] = value
-
+        else:
+            raise Exception("Unknown mutation rate. Could not calculate mutation matrix")
         return mutation_matrix
+
+    def simulate_mutation_binary(self,sequence:str):
+        """
+        Selects a random mutation site and changes "1" to "0" or "0" to "1"
+        :param sequence: str
+        :return: str sequence
+        """
+        sequence = list(sequence)
+        mutation_site = np.random.randint(0, len(sequence))
+        sequence[mutation_site] = "0" if sequence[mutation_site] == "1" else "1"
+        return "".join(sequence)
 
     def simulate_mutation(self, dna_sequence):
         """
@@ -181,20 +223,23 @@ class FWSim:
         :return:
         """
 
-        out_sequence = ''
-        for idx, nucleotide in enumerate(dna_sequence):
-            if nucleotide == "A":
-                out_sequence += np.random.choice(["A", "C", "G", "T"], p=self.mutation_matrix[0, :])
-            elif nucleotide == "C":
-                out_sequence += np.random.choice(["A", "C", "G", "T"], p=self.mutation_matrix[1, :])
-            elif nucleotide == "G":
-                out_sequence += np.random.choice(["A", "C", "G", "T"], p=self.mutation_matrix[2, :])
-            elif nucleotide == "T":
-                out_sequence += np.random.choice(["A", "C", "G", "T"], p=self.mutation_matrix[3, :])
-            else:
-                raise ValueError("Invalid nucleotide")
+        nucleotides = ["A", "C", "G", "T"]
+        out_sequence = list(dna_sequence)
+        b_loc = np.random.randint(0, len(dna_sequence))
+        nucleotide = out_sequence[b_loc]
 
-        return out_sequence
+        if nucleotide == "A":
+            out_sequence[b_loc] = np.random.choice(nucleotides, p=self.mutation_matrix[0, :])
+        elif nucleotide == "C":
+            out_sequence[b_loc] = np.random.choice(nucleotides, p=self.mutation_matrix[1, :])
+        elif nucleotide == "G":
+            out_sequence[b_loc] = np.random.choice(nucleotides, p=self.mutation_matrix[2, :])
+        elif nucleotide == "T":
+            out_sequence[b_loc] = np.random.choice(nucleotides, p=self.mutation_matrix[3, :])
+        else:
+            raise ValueError("Invalid nucleotide")
+
+        return "".join(out_sequence)
 
     @staticmethod
     def _choose_mutated_alleles(alleles):
@@ -208,8 +253,7 @@ class FWSim:
     def _choose_next_alleles(self, allele_freq):
         return np.random.multinomial(self.n_individuals, allele_freq)
 
-
-    def simulate(self):
+    def simulate_population(self):
 
         for generation in range(1, self.n_generations):
 
@@ -235,6 +279,19 @@ class FWSim:
             self.n_alleles = len(self.allele_indices)
 
         return self.allele_freq
+
+    def simulate_individual(self): ##TODO: Non-functional
+        ## initialize alleles matrix
+        population_matrix = np.zeros([self.n_generations, self.n_individuals], dtype=np.int32)
+        for generation in range(1, self.n_generations):
+            for individual in range(self.n_individuals):
+
+                ## Choose alleles for the next generation
+                population_matrix[generation, individual] = self._choose_next_alleles(self.allele_freq[generation - 1,:])
+                ## Mutate alleles/individuals
+                ###TODO: Implement mutation (Figure out how to do it)
+
+            self.allele_freq[generation, :] = np.sum(population_matrix[generation:]) / self.n_individuals
 
     def mutation_event(self, number_of_mutations):
         ### Get new mutations, update allele indices and outputs mutation counts
@@ -280,17 +337,34 @@ class FWSim:
         updated_allele_indices = {}
         return_idx_counter = 0
         for idx, boolean in enumerate(array):
-            if boolean:
+            if len(self.allele_indices) < idx: ###Number of new sequences cannot be more than the indexed sequences
+                break
+
+            if idx < len(self.initial_allele_seq) or boolean:  ### Do not change indices for initial sequences
                 updated_allele_indices[return_idx_counter] = self.allele_indices[idx]
                 return_idx_counter += 1
+
         self.allele_indices = updated_allele_indices
+        self.n_alleles = len(self.allele_indices)
         return updated_allele_indices
 
     def _update_allele_freq(self, allele_freq):
         self.allele_freq = allele_freq
         return self.allele_freq
 
-    def plot_allele_freq(self, filter_below=0.01):
+    def save_simulation(self, outdir=None, out_fasta_path=None, out_freq_path=None, out_parameters_path=None):
+        outdir = outdir if outdir else self.outdir
+        out_fasta_path = os.path.join(outdir, "fw_sequences.fasta") if not out_fasta_path else out_fasta_path
+        out_freq_path = os.path.join(outdir, "fw_freq.npy") if not out_freq_path else out_freq_path
+        out_parameters_path = os.path.join(outdir, "fw_parameters.json") if not out_parameters_path else out_parameters_path
+        self.save_parameters(out_parameters_path)
+        self.save_allele_freq(out_freq_path)
+        self.write_to_fasta(out_fasta_path)
+        self.plot_allele_freq(save_fig=True, file_name=os.path.join(outdir,'allele_freq.png'), dont_plot=True)
+        #os.replace('allele_freq.png', os.path.join(self.outdir, 'allele_freq.png'))
+
+    def plot_allele_freq(self, filter_below=None, save_fig=True, file_name='allele_freq.png', dont_plot=False):
+        import matplotlib.pyplot as plt
         if filter_below:
             self._filter_allele_freq(filter_below=filter_below)
 
@@ -301,10 +375,41 @@ class FWSim:
         plt.xlabel('Alleles')
         plt.ylabel('Generations')
         plt.colorbar()
+        if save_fig:
+            plt.savefig(file_name)
+        if dont_plot:
+            plt.close()
+            return None
         plt.show()
 
+    def write_to_fasta(self, file_name):
+        with open(file_name, 'w') as f:
+            for allele, sequence in self.allele_indices.items():
+                f.write(f'>Sample{allele}\n{sequence}\n')
 
-#ancestral_allele = "AAAATTTTGGGGCCCC"
-#sim = FWSim(initial_allele_seq=['AAGTTC', 'TAAAAC', 'AAATCGAAATGC'], n_individuals=400, n_generations=50, mutation_rates=0.01)
-#sim = FWSim(initial_allele_seq=[ancestral_allele], n_individuals=100, n_generations=50, mutation_rates=0.01, max_mutation_size=100)
-#sim.plot_allele_freq(filter_below=0.00001)
+    def save_allele_freq(self, file_name):
+        np.save(file_name, self.allele_freq)
+
+    def save_parameters(self, file_name):
+        """Save parameters to a json file"""
+        import json
+        with open(file_name, 'w') as f:
+            json.dump({
+                "initial_allele_seq": self.initial_allele_seq,
+                "n_individuals": self.n_individuals,
+                "n_generations": self.n_generations,
+                "mutation_rates": self.mutation_rates,
+                "max_mutation_size": self.max_mutation_size
+            }, f)
+
+    def read_fasta(self, file_name):
+        rv_list = []
+        with open(file_name, 'r') as f:
+            for line in f:
+                if line.startswith('>'):
+                    continue
+                else:
+                    rv_list.append(line.strip())
+
+        return rv_list
+

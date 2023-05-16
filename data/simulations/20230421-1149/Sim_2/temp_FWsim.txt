@@ -1,0 +1,340 @@
+>reference
+aagttcaaagtgt
+>Sample0
+>Sample1
+t	3
+a	13
+>Sample2
+a	4
+a	5
+>Sample3
+t	6
+>Sample4
+t	3
+c	7
+c	13
+>Sample5
+g	4
+g	5
+g	7
+a	10
+>Sample6
+c	4
+c	5
+>Sample7
+c	2
+c	5
+c	8
+c	9
+c	13
+>Sample8
+c	1
+t	2
+a	4
+a	6
+g	8
+>Sample9
+t	2
+a	3
+g	13
+>Sample10
+t	1
+g	2
+t	3
+c	7
+g	8
+a	13
+>Sample11
+t	1
+t	3
+g	6
+t	10
+a	13
+>Sample12
+c	2
+t	3
+a	4
+a	5
+t	9
+a	11
+a	12
+g	13
+>Sample13
+a	3
+g	4
+t	6
+c	8
+a	13
+>Sample14
+g	2
+t	3
+c	5
+t	8
+a	10
+a	13
+>Sample15
+c	4
+t	6
+t	12
+a	13
+>Sample16
+t	2
+t	3
+g	11
+a	13
+>Sample17
+t	3
+g	8
+a	11
+a	13
+>Sample18
+t	3
+g	5
+g	7
+>Sample19
+t	2
+t	3
+c	4
+c	5
+g	9
+a	10
+g	13
+>Sample20
+t	3
+c	12
+c	13
+>Sample21
+a	4
+c	5
+g	7
+c	10
+g	11
+g	13
+>Sample22
+c	1
+a	4
+g	7
+>Sample23
+c	1
+g	5
+t	6
+>Sample24
+c	2
+g	4
+c	5
+t	6
+c	8
+c	9
+t	10
+c	13
+>Sample25
+c	2
+t	3
+c	11
+a	13
+>Sample26
+a	4
+a	5
+a	12
+>Sample27
+t	1
+g	2
+a	4
+c	12
+>Sample28
+t	2
+t	3
+g	4
+g	7
+g	11
+a	13
+>Sample29
+a	4
+a	5
+c	9
+a	11
+>Sample30
+g	1
+t	2
+c	5
+t	6
+g	7
+g	8
+g	9
+c	13
+>Sample31
+c	1
+c	4
+a	5
+t	6
+g	7
+c	9
+c	13
+>Sample32
+t	1
+g	2
+c	4
+a	11
+c	12
+c	13
+>Sample33
+c	1
+c	2
+g	5
+g	8
+a	13
+>Sample34
+t	3
+a	4
+a	5
+a	6
+c	8
+>Sample35
+t	1
+a	4
+c	7
+>Sample36
+g	1
+t	3
+a	5
+>Sample37
+t	2
+g	4
+a	5
+c	8
+t	9
+a	12
+>Sample38
+g	2
+t	3
+g	7
+g	11
+a	13
+>Sample39
+t	2
+t	3
+c	5
+g	7
+c	8
+c	9
+c	10
+>Sample40
+t	3
+g	6
+g	8
+a	13
+>Sample41
+t	7
+c	9
+c	12
+>Sample42
+c	3
+g	4
+c	8
+c	9
+>Sample43
+t	2
+c	5
+c	9
+c	12
+a	13
+>Sample44
+a	3
+g	5
+t	8
+g	9
+g	11
+a	12
+>Sample45
+a	4
+a	10
+a	13
+>Sample46
+a	3
+a	4
+a	5
+c	10
+c	11
+>Sample47
+c	1
+t	3
+g	7
+c	9
+a	12
+>Sample48
+g	6
+c	11
+>Sample49
+c	3
+a	4
+a	5
+g	6
+g	8
+t	12
+a	13
+>Sample50
+a	3
+c	9
+a	13
+>Sample51
+c	1
+t	3
+g	5
+t	7
+a	13
+>Sample52
+a	4
+t	6
+g	11
+a	12
+a	13
+>Sample53
+t	1
+t	3
+a	4
+g	5
+a	6
+c	7
+a	10
+a	13
+>Sample54
+c	1
+c	3
+g	5
+t	12
+a	13
+>Sample55
+g	1
+t	2
+a	3
+a	4
+c	7
+c	8
+g	9
+g	11
+t	12
+>Sample56
+t	3
+g	6
+t	8
+a	12
+a	13
+>Sample57
+c	1
+g	2
+a	3
+g	4
+g	5
+t	7
+g	9
+>Sample58
+a	4
+c	5
+c	13
+>Sample59
+g	1
+a	3
+g	6
+g	7
+t	8
+c	11

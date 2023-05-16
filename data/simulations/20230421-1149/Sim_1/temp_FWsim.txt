@@ -1,0 +1,313 @@
+>reference
+aatttcaaagtga
+>Sample0
+g	3
+t	13
+>Sample1
+>Sample2
+g	3
+a	4
+a	5
+t	13
+>Sample3
+g	3
+c	4
+g	7
+c	9
+a	11
+t	12
+t	13
+>Sample4
+g	1
+g	3
+g	5
+t	6
+t	13
+>Sample5
+c	1
+t	2
+a	3
+a	5
+c	8
+g	9
+c	12
+g	13
+>Sample6
+c	1
+g	3
+t	8
+t	13
+>Sample7
+t	1
+g	3
+g	5
+g	6
+g	7
+t	13
+>Sample8
+t	1
+a	4
+t	12
+>Sample9
+g	1
+c	4
+c	8
+g	9
+>Sample10
+g	3
+c	13
+>Sample11
+a	5
+g	8
+a	10
+>Sample12
+t	8
+g	9
+>Sample13
+g	4
+c	8
+t	10
+g	11
+t	12
+>Sample14
+a	6
+c	13
+>Sample15
+a	5
+c	9
+t	10
+t	13
+>Sample16
+g	2
+g	5
+t	9
+c	11
+t	12
+c	13
+>Sample17
+t	2
+t	6
+g	11
+>Sample18
+g	2
+t	7
+>Sample19
+c	3
+a	4
+a	6
+g	11
+t	12
+>Sample20
+g	3
+a	4
+a	5
+c	8
+c	12
+t	13
+>Sample21
+c	3
+c	4
+a	5
+a	6
+g	7
+c	11
+a	12
+t	13
+>Sample22
+g	3
+g	7
+g	11
+>Sample23
+a	3
+a	4
+c	5
+t	7
+g	8
+c	9
+a	10
+t	13
+>Sample24
+c	2
+c	3
+g	4
+a	6
+c	13
+>Sample25
+g	6
+c	9
+g	11
+c	13
+>Sample26
+g	3
+c	7
+a	10
+t	13
+>Sample27
+g	5
+c	10
+>Sample28
+g	3
+g	5
+t	8
+t	9
+t	13
+>Sample29
+c	1
+a	3
+c	9
+t	13
+>Sample30
+c	1
+t	2
+a	3
+a	5
+a	6
+c	8
+g	9
+c	12
+g	13
+>Sample31
+c	1
+t	2
+a	3
+a	5
+c	7
+c	8
+g	9
+c	12
+g	13
+>Sample32
+t	2
+g	3
+a	4
+g	7
+t	9
+g	13
+>Sample33
+c	2
+g	3
+g	5
+t	10
+t	13
+>Sample34
+t	1
+g	2
+a	4
+a	5
+g	6
+a	12
+>Sample35
+g	1
+t	2
+g	3
+c	5
+c	7
+t	13
+>Sample36
+t	2
+g	3
+c	4
+a	6
+t	7
+c	9
+a	11
+t	12
+>Sample37
+g	4
+c	7
+>Sample38
+g	6
+c	7
+a	11
+>Sample39
+a	4
+c	10
+g	11
+t	12
+c	13
+>Sample40
+c	1
+c	3
+t	6
+t	7
+t	8
+a	12
+t	13
+>Sample41
+c	3
+g	5
+t	8
+t	9
+t	10
+g	11
+t	13
+>Sample42
+a	3
+g	4
+a	5
+t	9
+t	13
+>Sample43
+c	3
+a	4
+a	5
+t	6
+t	13
+>Sample44
+t	1
+g	2
+a	4
+g	6
+t	9
+a	12
+>Sample45
+c	4
+c	5
+>Sample46
+t	1
+c	2
+g	3
+a	4
+a	5
+g	6
+g	8
+c	9
+c	10
+c	12
+>Sample47
+a	3
+t	6
+c	7
+c	8
+t	10
+>Sample48
+t	1
+a	3
+a	4
+c	5
+t	6
+t	13
+>Sample49
+t	1
+g	2
+c	3
+a	4
+a	5
+g	6
+t	8
+c	9
+a	10
+a	12
+>Sample50
+t	2
+g	3
+a	4
+g	7
+g	9
+t	10
+c	11
+t	13
+>Sample51
+c	1
+c	8
+g	9

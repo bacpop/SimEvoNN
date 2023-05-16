@@ -1,0 +1,352 @@
+>reference
+aagttcaaagtgt
+>Sample0
+>Sample1
+t	3
+a	13
+>Sample2
+a	4
+a	5
+>Sample3
+t	1
+c	2
+t	6
+g	8
+a	11
+>Sample4
+t	2
+t	6
+a	10
+g	11
+a	13
+>Sample5
+a	3
+g	5
+g	6
+g	9
+a	13
+>Sample6
+g	2
+c	4
+c	5
+a	6
+c	9
+a	13
+>Sample7
+t	1
+t	7
+g	9
+>Sample8
+a	3
+g	6
+c	8
+>Sample9
+c	1
+t	2
+c	3
+t	10
+c	13
+>Sample10
+a	3
+g	8
+>Sample11
+c	1
+c	4
+a	6
+t	8
+t	9
+>Sample12
+g	5
+g	9
+c	10
+a	13
+>Sample13
+g	1
+g	4
+g	8
+a	12
+>Sample14
+g	8
+g	9
+g	13
+>Sample15
+t	3
+t	7
+g	11
+c	12
+a	13
+>Sample16
+g	2
+t	3
+g	7
+a	10
+g	11
+a	12
+a	13
+>Sample17
+t	1
+t	3
+a	4
+g	6
+c	7
+t	10
+a	11
+a	13
+>Sample18
+c	2
+t	3
+c	5
+a	6
+c	8
+t	10
+a	13
+>Sample19
+t	3
+t	12
+a	13
+>Sample20
+t	1
+t	3
+a	5
+t	7
+t	8
+a	10
+c	11
+>Sample21
+g	2
+t	3
+t	7
+c	8
+a	13
+>Sample22
+t	3
+t	7
+t	8
+c	10
+>Sample23
+g	1
+c	2
+a	3
+t	9
+a	10
+a	12
+a	13
+>Sample24
+t	3
+a	5
+t	6
+c	13
+>Sample25
+t	3
+g	6
+t	10
+g	11
+c	13
+>Sample26
+a	4
+a	5
+g	8
+a	10
+a	11
+>Sample27
+t	1
+a	4
+c	5
+c	10
+a	11
+>Sample28
+c	2
+a	3
+a	5
+>Sample29
+a	4
+t	7
+>Sample30
+g	2
+t	3
+g	5
+c	11
+a	13
+>Sample31
+t	2
+t	3
+a	6
+t	10
+g	11
+a	13
+>Sample32
+g	2
+c	3
+a	4
+a	5
+g	7
+c	10
+t	12
+>Sample33
+a	3
+c	8
+c	9
+c	10
+a	12
+>Sample34
+t	2
+a	4
+a	5
+g	6
+g	8
+t	9
+t	12
+c	13
+>Sample35
+a	3
+a	4
+a	5
+a	10
+>Sample36
+g	2
+c	4
+g	6
+g	7
+c	9
+a	10
+g	11
+a	12
+g	13
+>Sample37
+c	1
+t	3
+g	7
+g	9
+c	12
+a	13
+>Sample38
+g	1
+t	2
+t	3
+a	4
+g	5
+t	8
+g	11
+>Sample39
+c	1
+t	2
+t	7
+t	10
+g	11
+c	12
+c	13
+>Sample40
+g	1
+c	2
+a	5
+t	8
+a	11
+a	12
+>Sample41
+g	4
+a	5
+c	8
+g	9
+c	10
+a	13
+>Sample42
+a	4
+a	5
+g	8
+c	10
+g	11
+t	12
+g	13
+>Sample43
+g	1
+t	2
+c	3
+a	4
+a	5
+t	7
+t	8
+a	10
+a	11
+a	12
+a	13
+>Sample44
+g	1
+t	3
+g	7
+g	9
+g	11
+a	13
+>Sample45
+a	5
+c	8
+g	9
+c	10
+c	11
+c	13
+>Sample46
+g	1
+g	2
+a	3
+a	4
+g	6
+g	8
+g	9
+a	11
+a	12
+c	13
+>Sample47
+c	2
+c	4
+a	5
+c	8
+g	9
+t	10
+c	11
+>Sample48
+c	1
+a	4
+a	5
+t	6
+g	7
+t	8
+t	9
+a	12
+g	13
+>Sample49
+t	1
+a	4
+a	5
+>Sample50
+t	2
+t	3
+t	7
+c	8
+c	9
+c	10
+c	11
+t	12
+c	13
+>Sample51
+t	2
+c	3
+c	4
+c	5
+t	6
+g	7
+c	9
+a	10
+g	11
+a	12
+g	13
+>Sample52
+g	1
+c	2
+a	5
+a	6
+t	8
+t	9
+a	11
+>Sample53
+t	2
+a	4
+a	5

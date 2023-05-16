@@ -1,0 +1,1 @@
+{"initial_allele_seq": ["AAGTTCAAAGTGT", "AATTTCAAAGTGA", "AAGAACAAAGTGT"], "n_individuals": 64, "n_generations": 20, "mutation_rates": 0.1, "max_mutation_size": 500}
