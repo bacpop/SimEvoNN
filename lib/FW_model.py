@@ -131,25 +131,21 @@ from config import DATA_PATH
 
 class FWSim:
     """
-    Binary representation of nucleotides
-    A=00
-    T=11
-    C=01
-    G=10
+    Fisher-Wright Simulator
+    This class takes n_individuals, n_generations, initial_allele_seq or input_fasta, mutation_rates, max_mutation_size
+    And
+    produces a simulation result --> allele_freq: n_generations x (n_alleles + max_mutation_size)
     """
 
     def __init__(
             self, n_individuals, n_generations, initial_allele_seq:list=None,
             mutation_rates:dict or float=None, max_mutation_size:int=None,
-            convert_to_binary:bool=False, input_fasta:str=None, outdir:str=None
+            input_fasta:str=None, outdir:str=None
 
     ):
         self.input_fasta = input_fasta
         if input_fasta is not None and initial_allele_seq is None:
-            if convert_to_binary:
-                initial_allele_seq = self.convert_fasta_to_binary(input_fasta)
-            else:
-                initial_allele_seq = self.read_fasta(input_fasta)
+            initial_allele_seq = self.read_fasta(input_fasta)
 
         self.outdir = outdir if outdir is not None else os.path.join(DATA_PATH, f"FWSim_{time.strftime('%Y%m%d_%H%M')}")
 
@@ -166,6 +162,11 @@ class FWSim:
         self.initialize_allele_freq_matrix()
         self.initialize_mutation_matrix()
 
+    def reinitialize_params_and_frequencies(self, n_individuals, mutation_rates):
+        self.n_individuals = n_individuals
+        self.mutation_rates = mutation_rates
+        self.reset_frequencies()
+        self.initialize_mutation_matrix()
 
     def reset_frequencies(self):
         self.n_alleles = len(self.initial_allele_seq) if isinstance(self.initial_allele_seq, list) else 1
@@ -177,8 +178,7 @@ class FWSim:
         self.allele_freq[0, :self.n_alleles] = 1 / self.n_alleles
 
     def initialize_mutation_matrix(self):
-        if self.mutation_matrix is None:
-            self.mutation_matrix = self.construct_mutation_matrix(self.mutation_rates)
+        self.mutation_matrix = self.construct_mutation_matrix(self.mutation_rates)
 
     def get_allele_summary_stats(self):
         pass
@@ -352,15 +352,14 @@ class FWSim:
         self.allele_freq = allele_freq
         return self.allele_freq
 
-    def save_simulation(self, outdir=None, out_fasta_path=None, out_freq_path=None, out_parameters_path=None):
-        outdir = outdir if outdir else self.outdir
-        out_fasta_path = os.path.join(outdir, "fw_sequences.fasta") if not out_fasta_path else out_fasta_path
-        out_freq_path = os.path.join(outdir, "fw_freq.npy") if not out_freq_path else out_freq_path
-        out_parameters_path = os.path.join(outdir, "fw_parameters.json") if not out_parameters_path else out_parameters_path
+    def save_simulation(self, out_fasta_path=None, out_freq_path=None, out_parameters_path=None):
+        out_fasta_path = os.path.join(self.outdir, "fw_sequences.fasta") if not out_fasta_path else out_fasta_path
+        out_freq_path = os.path.join(self.outdir, "fw_freq.npy") if not out_freq_path else out_freq_path
+        out_parameters_path = os.path.join(self.outdir, "fw_parameters.json") if not out_parameters_path else out_parameters_path
         self.save_parameters(out_parameters_path)
         self.save_allele_freq(out_freq_path)
         self.write_to_fasta(out_fasta_path)
-        self.plot_allele_freq(save_fig=True, file_name=os.path.join(outdir,'allele_freq.png'), dont_plot=True)
+        self.plot_allele_freq(save_fig=True, file_name=os.path.join(self.outdir,'allele_freq.png'), dont_plot=True)
         #os.replace('allele_freq.png', os.path.join(self.outdir, 'allele_freq.png'))
 
     def plot_allele_freq(self, filter_below=None, save_fig=True, file_name='allele_freq.png', dont_plot=False):

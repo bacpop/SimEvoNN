@@ -39,7 +39,7 @@ def run_maple(input_fasta_path):
     input_fasta= os.path.basename(input_fasta_path)
     ### First create a Maple VCF format
     temp_maple_file = tempfile.mktemp(suffix=".txt", prefix="WF_sim", dir=input_dir)
-    call_subprocess("pypy", [MAPLE.createMapleFile, "--path", f"{input_dir}/", "--fasta", input_fasta, "--overwrite", "--output", os.path.basename(temp_maple_file)])
+    call_subprocess("pypy", [MAPLE.createMapleFile, "--path", f"{input_dir}/", "--fasta", input_fasta, "--output", os.path.basename(temp_maple_file), "--overwrite"])
     ### Then construct a tree
     call_subprocess("pypy", [MAPLE.run_Maple, "--input", temp_maple_file, "--output", f"{input_dir}/", "--overwrite"])
 

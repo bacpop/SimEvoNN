@@ -29,17 +29,22 @@ class Simulator(Alleles, PhyloTree):
     :param out_dir: the path in which the results will be saved
     :return:
 """
-    def __init__(self, input_fasta: str, n_repeats: int,
-                 n_generations: int, n_individuals: int,
-                 mutation_rate: float, max_mutations: int = None,
+
+    def __init__(self, input_fasta: str, n_repeats: int, n_batches: int = 1,
+                 n_generations: int = None, n_individuals: int = None,
+                 mutation_rate: float = None, max_mutations: int = None,
                  filter_allele_freq_below=0.0, tree_path: str = None, out_fast: str = None,
-                 out_dir: str = None, save_data=True,
+                 outdir: str = None, workdir: str = None, save_data=True,
+                 save_parameters_on_output_matrix=False,
+                 sim_name: str = None, prior_parameters: dict = None
                  ):
-        self.out_dir = out_dir if out_dir is not None else os.path.join(DATA_PATH, "simulations",
-                                                                        str(time.strftime("%Y%m%d-%H%M")))
-        self.work_dir = tempfile.mkdtemp(prefix="Simulator")
+        self.sim_name = sim_name if sim_name is not None else "sim"
+        self.out_dir = outdir if outdir is not None else os.path.join(DATA_PATH, "simulations",
+                                                                      str(time.strftime("%Y%m%d-%H%M")))
         os.mkdir(self.out_dir) if not os.path.exists(self.out_dir) else None
+        self.work_dir = workdir if workdir is not None else tempfile.mkdtemp(prefix=f"Simulator_{self.sim_name}")
         self.save_data = save_data
+        self.save_parameters_on_output_matrix = save_parameters_on_output_matrix
 
         self.in_fasta = input_fasta
         # self.tree_path = os.path.join(self.out_dir, "alleles.tree")
@@ -49,78 +54,102 @@ class Simulator(Alleles, PhyloTree):
         self.maple_sequences_path = None
 
         self.n_repeats = n_repeats
+        self.n_batches = n_batches
         self.sim_number = 0
 
         ### Fisher-Wright model and ALleles parameters
+        self.prior_parameters = prior_parameters
+        self.n_generations = n_generations
+        self.max_mutation_size = max_mutations
+        self.mutation_rate = mutation_rate
+        self.n_individuals = n_individuals
         self.filter_below = filter_allele_freq_below
+        self.initial_sequence = self._read_fasta(self.in_fasta)
+        self.initial_allele_seq = self.initial_sequence
         Alleles.__init__(self,
-                       n_individuals=n_individuals, n_generations=n_generations,
-                       input_fasta=input_fasta, mutation_rates=mutation_rate, max_mutation_size=max_mutations,
-                       outdir=out_dir
-                       )
+                         n_individuals=n_individuals, n_generations=self.n_generations,
+                         initial_allele_seq=self.initial_sequence, mutation_rates=mutation_rate,
+                         max_mutation_size=self.max_mutation_size, outdir=self.work_dir)
 
         ### Phylogenetic tree parameters
         PhyloTree.__init__(self, tree_path=tree_path)
 
-
         ### Output
         # self.sumsts_matrix = np.zeros([n_repeats], dtype=[(keyname, data_type) for keyname in self.tree_stats_idx.keys()])
-        self.sumsts_matrix = np.zeros([n_repeats, len(self.tree_stats_idx) + len(self.allele_stats_indices)])
+        self.sumsts_matrix = np.zeros(
+            [n_repeats * n_batches, len(self.tree_stats_idx) + len(self.allele_stats_indices)])
+        self.resulting_matrix = None
 
     def run(self):
-        for i in range(self.n_repeats):
-            out_sim_dir, sim_number = self._create_new_dir(i)
-            print(f"Running simulation {sim_number}...")
+        for i in range(1, self.n_repeats + 1):
+            ne, mu = np.random.randint(1, 1000), np.random.uniform(0, 1)
+            for b in range(1, self.n_batches+1):
+                self.sim_number += 1
+                self._create_new_dir(self.sim_number)
+                print(f"Running simulation {self.sim_number}...")
 
-            #try:
-            self._run_FWSim()
-            #except Exception as e:
-            #    print(f"FWSim failed for {sim_number}", e)
-            #    shutil.rmtree(out_sim_dir)
-            #    continue
+                try:
+                    self._run_FWSim(ne=ne, mu=mu)
+                except Exception as e:
+                    print(f"Wright-Fisher simulator failed for simulation number {self.sim_number}", e)
+                    #shutil.rmtree(out_sim_dir)
+                    continue
 
-            ##Check point for the number of alleles
-            if self.n_alleles < 3:
-                print(f"Simulation {sim_number} has less than 3 alleles")
-                shutil.rmtree(out_sim_dir)
-                continue
+                ##Check point for the number of alleles
+                if self.n_alleles < 3:
+                    print(f"Simulation number {self.sim_number} has less than 3 alleles")
+                    #shutil.rmtree(out_sim_dir)
+                    continue
 
-            try:  ##FIXME: sometimes Maple cannot construct tree from diverse seqeunces or seqeunce length does not add up
-                self._run_MAPLE()
-            except Exception as e:
-                print(f"Maple failed for {sim_number}", e)
-                shutil.rmtree(out_sim_dir)
-                continue
+                try:  ##FIXME: sometimes Maple cannot construct tree from diverse seqeunces or seqeunce length does not add up
+                    self._run_MAPLE()
+                except Exception as e:
+                    print(f"Maple failed for simulation number {self.sim_number}", e)
+                    #shutil.rmtree(out_sim_dir)
+                    continue
 
-            ##Calculate allele statistics from Maple file and allele freqs of FWsim
-            self._run_Alleles()
+                ##Calculate allele statistics from Maple file and allele freqs of FWsim
+                try:
+                    self._run_Alleles()
+                except Exception as e:
+                    print(f"Run Alleles failed for {self.sim_number}", e)
+                    #shutil.rmtree(out_sim_dir)
+                    continue
 
-            #try:
-            self._run_PhyloTree()
-            #except Exception as e:  ##Sometimes when the tree is so small, it raises Exception
-            #    print(f"PhyloTree failed for {sim_number}", e)
-            #    shutil.rmtree(out_sim_dir)
-            #    continue
+                try:
+                    self._run_PhyloTree()
+                except Exception as e:  ##Sometimes when the tree is so small, it raises Exception
+                    print(f"PhyloTree failed for {self.sim_number}", e)
+                    #shutil.rmtree(out_sim_dir)
+                    continue
 
-            self.sumsts_matrix[i, :len(self.tree_stats_idx)] = self.tree_stats
-            self.sumsts_matrix[i, len(self.tree_stats_idx):] = self.allele_stats
+                self.sumsts_matrix[(i - 1) * self.n_batches:i * self.n_batches,:len(self.tree_stats_idx)] = self.tree_stats
+                self.sumsts_matrix[(i - 1) * self.n_batches:i * self.n_batches, len(self.tree_stats_idx):] = self.allele_stats
 
-            if self.save_data:
-                self.save_stats(os.path.join(out_sim_dir, 'tree_stats.json'))
-                self.save_tree(os.path.join(out_sim_dir, 'tree.png'))
-                self.save_simulation(os.path.join(out_sim_dir))
-                self._mv_maple_outputs(out_sim_dir)
+                if self.save_data:
+                    out_dir = os.path.join(self.out_dir, f"Sim_{self.sim_number}")
+                    os.mkdir(out_dir) if not os.path.exists(out_dir) else None
+                    self.save_stats(os.path.join(out_dir, 'tree_stats.json'))
+                    self.save_tree(os.path.join(out_dir, 'tree.png'))
+                    self.save_simulation(out_dir)
+                    self._mv_maple_outputs(out_dir)
 
+            if self.save_parameters_on_output_matrix:
+                self.resulting_matrix = np.c_[
+                    self.sumsts_matrix[(i - 1) * self.n_batches:i * self.n_batches], np.array([ne, mu, self.n_generations, self.max_mutation_size]) * np.ones(
+                        [self.n_batches, 4])
+                ]
             else:
-                shutil.rmtree(out_sim_dir)
+                self.resulting_matrix = self.sumsts_matrix
 
-            self.sim_number += 1
+        np.save(os.path.join(self.out_dir, f"{self.sim_name}_results.npy"), self.resulting_matrix)
+        shutil.rmtree(self.work_dir)
 
-        np.save(os.path.join(self.out_dir, "simulation_results.npy"), self.sumsts_matrix)
+    def _run_FWSim(self, ne, mu):
+        ### Run Wright-Fisher simulation
 
-    def _run_FWSim(self):
-        ### Run FWSim
-        self.reset_frequencies()  ## Re-initiate n_alleles, allele frequencies
+        ## Re-initiate n_alleles, allele frequencies, mutation rates and n_individuals
+        self.reinitialize_params_and_frequencies(mutation_rates=mu, n_individuals=ne)
         self.simulate_population()
         self._filter_allele_freq(self.filter_below)
         #### Sets out fasta that will be used by the MAPLE
@@ -140,35 +169,70 @@ class Simulator(Alleles, PhyloTree):
         self.calculate_allele_stats()
 
     def _create_new_dir(self, repeat_idx):
-        sim_num = repeat_idx
+        ### ELFI compatible directory creation
+        ## ELFI does not run inside the class, but gives each value from outside
+        ## In order to follow simulation number, this function follows the simulation number from directory name and number
         sim_dir = f"Sim_{repeat_idx}"
-        outpath = os.path.join(self.out_dir, sim_dir)
+        outpath = os.path.join(self.work_dir, sim_dir)
         if os.path.exists(outpath):
             sim_num = max(
-                list(map(lambda x: int(x.split("_")[-1]), [folder for folder in os.listdir(os.path.join("/", *outpath.split("/")[:-1])) if "Sim_" in folder]))
+                list(map(lambda x: int(x.split("_")[-1]),
+                         [folder for folder in os.listdir(os.path.join("/", *outpath.split("/")[:-1])) if
+                          "Sim_" in folder]))
             )
             sim_dir = f"Sim_{sim_num + 1}"
-            outpath = os.path.join(self.out_dir, sim_dir)
+            outpath = os.path.join(self.work_dir, sim_dir)
             self.sim_number = sim_num
 
         os.mkdir(outpath)
-        return outpath, sim_num
+        return outpath
 
-    def _mv_maple_outputs(self, sim_out_dir):
+    def _mv_maple_outputs(self, target_dir):
         maple_files = os.listdir(self.work_dir)
         for filename in maple_files:
-            shutil.move(os.path.join(self.work_dir, filename), sim_out_dir)
+            shutil.move(os.path.join(self.work_dir, filename), target_dir)
+
+    @staticmethod
+    def _read_fasta(file_name):
+        rv_list = []
+        seq = ''
+        old_seq = False
+        with open(file_name, 'r') as f:
+            for line in f:
+                if line.startswith('>') and old_seq:
+                    rv_list.append(seq)
+                    seq = ''
+                    old_seq = False
+
+                elif line[0].lower() in {"a", "c", "g", "t", "n"}:
+                    seq += line.strip()
+                    old_seq = True
+
+            rv_list.append(seq)
+
+        return rv_list
+
+    def _get_prior_distributions(self):
+        ### Not used atm, but can be used to set random priors from cli
+        if self.prior_parameters is None:
+            params_dict = None
+            pass  #### Automatically set the priors
+        elif isinstance(self.prior_parameters, dict):
+            pass  #### Set the priors from the dictionary
+        elif isinstance(self.prior_parameters, str):
+            pass  #### Read the priors from the file
+        else:
+            raise ValueError("prior_parameters must be either a dictionary, a string or None")
 
 
 def simulator(n_individuals, mutation_rate,  ### These are for Priors
               input_fasta, n_generations, max_mutations, work_dir=None,
-              save_data=False, filter_below=0.0,
-              batch_size=1, random_state=None, add_parameters=False
+              save_data=False, filter_below=0.0,n_repeats=1,
+              batch_size=1, random_state=None, add_parameters=False, outdir=None, dtype=np.float32
               ):
     """Wrapper for the simulator to make it compatible with the ELFI model
 
-    This adds support for batch_size, transforms the data to a form that is efficient to store
-    etc.
+    This adds support for batch_size, random_state and dtype
 
     Parameters
     ----------
@@ -194,17 +258,15 @@ def simulator(n_individuals, mutation_rate,  ### These are for Priors
                   n_individuals=n_individuals,
                   mutation_rate=mutation_rate,
                   max_mutations=max_mutations,
-                  n_repeats=batch_size,
-                  out_dir=work_dir if work_dir is not None else os.path.join(DATA_PATH, "simulations",
+                  n_repeats=n_repeats,
+                  n_batches=batch_size,
+                  workdir=work_dir,
+                  outdir=outdir if outdir is not None else os.path.join(DATA_PATH, "simulations",
                                                                              str(time.strftime("%Y%m%d-%H%M"))),
                   filter_allele_freq_below=filter_below,
-                  save_data=save_data
+                  save_data=save_data,
+                  save_parameters_on_output_matrix=add_parameters,
                   )
 
     s.run()
-    res = s.sumsts_matrix
-    if add_parameters:
-        res = np.c_[
-            res, np.array([n_individuals, mutation_rate, n_generations, max_mutations]) * np.ones([batch_size, 4])]
-    return res
-
+    return s.resulting_matrix
