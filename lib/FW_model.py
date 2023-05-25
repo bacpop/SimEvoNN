@@ -157,6 +157,8 @@ class FWSim:
 
         self.n_alleles = len(initial_allele_seq) if isinstance(initial_allele_seq, list) else 1
         self.allele_freq = None
+        self.allele_mutation_indices = None ## Holds seq_id: [(bp_location, nucleotide), ...]
+        self.allele_mutation_indices_set = None
         self.mutation_matrix = None
         self.allele_indices = {idx: seq for idx, seq in enumerate(initial_allele_seq)}
         self.initialize_allele_freq_matrix()
@@ -176,6 +178,8 @@ class FWSim:
     def initialize_allele_freq_matrix(self):
         self.allele_freq = np.zeros([self.n_generations, self.n_alleles+self.max_mutation_size], dtype=np.float64)
         self.allele_freq[0, :self.n_alleles] = 1 / self.n_alleles
+        self.allele_mutation_indices = {idx: [] for idx in range(self.n_alleles)}
+        self.allele_mutation_indices_set = set()
 
     def initialize_mutation_matrix(self):
         self.mutation_matrix = self.construct_mutation_matrix(self.mutation_rates)
@@ -227,19 +231,22 @@ class FWSim:
         out_sequence = list(dna_sequence)
         b_loc = np.random.randint(0, len(dna_sequence))
         nucleotide = out_sequence[b_loc]
+        mutated_to = None
 
         if nucleotide == "A":
-            out_sequence[b_loc] = np.random.choice(nucleotides, p=self.mutation_matrix[0, :])
+            mutated_to = np.random.choice(nucleotides, p=self.mutation_matrix[0, :])
         elif nucleotide == "C":
-            out_sequence[b_loc] = np.random.choice(nucleotides, p=self.mutation_matrix[1, :])
+            mutated_to = np.random.choice(nucleotides, p=self.mutation_matrix[1, :])
         elif nucleotide == "G":
-            out_sequence[b_loc] = np.random.choice(nucleotides, p=self.mutation_matrix[2, :])
+            mutated_to = np.random.choice(nucleotides, p=self.mutation_matrix[2, :])
         elif nucleotide == "T":
-            out_sequence[b_loc] = np.random.choice(nucleotides, p=self.mutation_matrix[3, :])
+            mutated_to = np.random.choice(nucleotides, p=self.mutation_matrix[3, :])
         else:
             raise ValueError("Invalid nucleotide")
 
-        return "".join(out_sequence)
+        out_sequence[b_loc] = mutated_to
+        ### Update nucleotide mutation indices
+        return "".join(out_sequence), b_loc, mutated_to, nucleotide
 
     @staticmethod
     def _choose_mutated_alleles(alleles):
@@ -295,21 +302,46 @@ class FWSim:
 
     def mutation_event(self, number_of_mutations):
         ### Get new mutations, update allele indices and outputs mutation counts
-
+        ##TODO: parent_idx, child_idx, init_nuc, mutated_nuc, base_pair_loc --> represent a new sequence
+        ###TODO: Think of optimising this part (using numpy arrays)
         no_mutation_counts = {}
         mutation_counts = {}
         counts = {}
         for allele_idx, allele_count in enumerate(number_of_mutations):
             for c in range(allele_count):
                 ##Simulate mutation to get de-novo sequence
-                mutated_seq = self.simulate_mutation(self.allele_indices[allele_idx])
+                mutated_seq, bp_loc, mutated_nuc, init_nuc = self.simulate_mutation(self.allele_indices[allele_idx])
+                seq_representation = (allele_idx, init_nuc, mutated_nuc, bp_loc)
                 ##Check if the sequence is already in the dictionary
-                if mutated_seq not in self.allele_indices.values():
-                    self.allele_indices[len(self.allele_indices)] = mutated_seq
-                    mutation_counts[mutated_seq] = 1
+                if seq_representation not in self.allele_mutation_indices_set and allele_idx in self.allele_indices.keys():
+                    self.allele_mutation_indices_set.add(seq_representation)
+                    len_indices = len(self.allele_indices)
+                    ### Keep track of the mutation indices and allele indices
+                    if allele_idx in self.allele_mutation_indices.keys():
+                        ## Keep in minde that the mutation locations are relative to the original sequence
+                        self.allele_mutation_indices[len_indices] = self.allele_mutation_indices[allele_idx].copy()
+                        self.allele_mutation_indices[len_indices].append(seq_representation)
+                    else:
+                        print("New allele")
+                        self.allele_mutation_indices[len_indices] = [seq_representation]
+
+                    self.allele_indices[len_indices] = mutated_seq
+                    mutation_counts[seq_representation] = 1
                     counts[mutated_seq] = 1
                     continue
-                if mutated_seq in mutation_counts.keys():
+
+                ## If the sequence is already in the dictionary, update the counts
+                if seq_representation in mutation_counts.keys():
+                    mutation_counts[seq_representation] += 1
+                    counts[mutated_seq] += 1
+                elif seq_representation in no_mutation_counts.keys():
+                    no_mutation_counts[seq_representation] += 1
+                    counts[mutated_seq] += 1
+                else:
+                    no_mutation_counts[seq_representation] = 1
+                    counts[mutated_seq] = 1
+        return counts
+    """         if mutated_seq in mutation_counts.keys():
                     mutation_counts[mutated_seq] += 1
                     counts[mutated_seq] += 1
                 elif mutated_seq in no_mutation_counts.keys():
@@ -319,7 +351,7 @@ class FWSim:
                     no_mutation_counts[mutated_seq] = 1
                     counts[mutated_seq] = 1
 
-        return counts
+        return counts"""
 
     def _get_index(self, sequence):
         for key, value in self.allele_indices.items():
@@ -334,6 +366,7 @@ class FWSim:
         return allele_freq
 
     def _update_allele_indices(self, array:np.array):
+        ###TODO: Include update of mutation indices
         updated_allele_indices = {}
         return_idx_counter = 0
         for idx, boolean in enumerate(array):

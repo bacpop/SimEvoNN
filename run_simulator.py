@@ -71,5 +71,10 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    import timeit
+    start = timeit.default_timer()
     run_simulator(args)
+    stop = timeit.default_timer()
+    eplased_time = stop - start
+    print(f"Time taken: {eplased_time/60} minutes")
 
