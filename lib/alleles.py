@@ -64,7 +64,10 @@ class Alleles(FWSim):
         )
 
         self.variants_dict = {pos: [ref.lower()] for pos, ref in enumerate(self.allele_indices[0])}
-        self._construct_haplotypes_from_maple_variants_file(maple_file)
+        if maple_file:
+            self._construct_haplotypes_from_maple_variants_file(maple_file)
+        else:
+            self._construct_haplotypes_from_FWsim()
         self._generate_haplotype_array()
         self._get_counts()
 
@@ -189,6 +192,17 @@ class Alleles(FWSim):
                         position = int(position) -1 ## 0-based indexing for mutation array
                         self.variants_dict.setdefault(position, []).append(nucleotide) ## We can add each nucleotide to get counts
                         self.sequences_mut_array[seq_id, position] = self.variants_dict[position].index(nucleotide) ## Index method always returns the first encounter
+
+        return self.sequences_mut_array
+
+    def _construct_haplotypes_from_FWsim(self):
+        self.sequences_mut_array[0, :] = 0 ## Initialize the sequences_mut_array with the reference sequence
+        ##Each variant on location i is represented by a number between 0 and 3, 0 being the reference nucleotide, 1, 2 and 3 being the other three nucleotides
+        for sed_id, seq_representation in self.allele_mutation_indices.items():
+            for representation in seq_representation:
+                parent_idx, ref, alt, position = representation
+                self.variants_dict.setdefault(position, []).append(alt)
+                self.sequences_mut_array[sed_id, position] = self.variants_dict[position].index(alt)
 
         return self.sequences_mut_array
 
