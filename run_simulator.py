@@ -66,7 +66,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_mutations', type=int, help='Maximum number of mutations to simulate', required=False, default=200)
     parser.add_argument('--batch_size', type=int, help='Batch size to simulate', required=False, default=1)
     parser.add_argument('--workdir', type=str, help='Work directory to simulate', required=False, default=None)
-    parser.add_argument('--filter_below', type=float, help='Filter below', required=False, default=0.0)
+    parser.add_argument('--filter_below', type=float, help='Filter below', required=False, default=None)
     parser.add_argument('--outdir', type=str, help='Output directory for simulations', required=False, default=None)
 
     args = parser.parse_args()

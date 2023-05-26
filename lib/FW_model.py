@@ -368,6 +368,7 @@ class FWSim:
     def _update_allele_indices(self, array:np.array):
         ###TODO: Include update of mutation indices
         updated_allele_indices = {}
+        updated_mutations_indices = {}
         return_idx_counter = 0
         for idx, boolean in enumerate(array):
             if len(self.allele_indices) < idx: ###Number of new sequences cannot be more than the indexed sequences
@@ -375,11 +376,12 @@ class FWSim:
 
             if idx < len(self.initial_allele_seq) or boolean:  ### Do not change indices for initial sequences
                 updated_allele_indices[return_idx_counter] = self.allele_indices[idx]
+                updated_mutations_indices[return_idx_counter] = self.allele_mutation_indices[idx]
                 return_idx_counter += 1
 
         self.allele_indices = updated_allele_indices
+        self.allele_mutation_indices = updated_mutations_indices
         self.n_alleles = len(self.allele_indices)
-        return updated_allele_indices
 
     def _update_allele_freq(self, allele_freq):
         self.allele_freq = allele_freq

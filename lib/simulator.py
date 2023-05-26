@@ -33,7 +33,7 @@ class Simulator(Alleles, PhyloTree):
     def __init__(self, input_fasta: str, n_repeats: int, n_batches: int = 1,
                  n_generations: int = None, n_individuals: int = None,
                  mutation_rate: float = None, max_mutations: int = None,
-                 filter_allele_freq_below=0.0, tree_path: str = None, out_fast: str = None,
+                 filter_allele_freq_below=None, tree_path: str = None, out_fast: str = None,
                  outdir: str = None, workdir: str = None, save_data=True,
                  save_parameters_on_output_matrix=False,
                  sim_name: str = None, prior_parameters: dict = None
@@ -96,6 +96,12 @@ class Simulator(Alleles, PhyloTree):
                     #shutil.rmtree(out_sim_dir)
                     continue
 
+                ##Check point for the number of alleles
+                if self.n_alleles < 3: ## Some calculations raise error after this point
+                    print(f"Simulation number {self.sim_number} has less than 3 alleles")
+                    # shutil.rmtree(out_sim_dir)
+                    continue
+
                 ##Calculate allele statistics and allele freqs of FWsim
                 try:
                     self._run_Alleles()
@@ -104,12 +110,6 @@ class Simulator(Alleles, PhyloTree):
                     # shutil.rmtree(out_sim_dir)
                     #continue
                     raise e
-
-                ##Check point for the number of alleles
-                if self.n_alleles < 3:
-                    print(f"Simulation number {self.sim_number} has less than 3 alleles")
-                    #shutil.rmtree(out_sim_dir)
-                    #continue
 
                 try:  ##FIXME: sometimes Maple cannot construct tree from diverse seqeunces or seqeunce length does not add up
                     self._run_MAPLE()
@@ -152,7 +152,7 @@ class Simulator(Alleles, PhyloTree):
         ## Re-initiate n_alleles, allele frequencies, mutation rates and n_individuals
         self.reinitialize_params_and_frequencies(mutation_rates=mu, n_individuals=ne)
         self.simulate_population()
-        if self.filter_below:
+        if self.filter_below is not None:
             self._filter_allele_freq(self.filter_below)
         #### Sets out fasta that will be used by the MAPLE
         self.write_to_fasta(self.out_fasta)
