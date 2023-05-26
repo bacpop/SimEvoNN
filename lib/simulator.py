@@ -33,7 +33,7 @@ class Simulator(Alleles, PhyloTree):
     def __init__(self, input_fasta: str, n_repeats: int, n_batches: int = 1,
                  n_generations: int = None, n_individuals: int = None,
                  mutation_rate: float = None, max_mutations: int = None,
-                 filter_allele_freq_below=0.0, tree_path: str = None, out_fast: str = None,
+                 filter_allele_freq_below=None, tree_path: str = None, out_fast: str = None,
                  outdir: str = None, workdir: str = None, save_data=True,
                  save_parameters_on_output_matrix=False,
                  sim_name: str = None, prior_parameters: dict = None
@@ -43,6 +43,7 @@ class Simulator(Alleles, PhyloTree):
                                                                       str(time.strftime("%Y%m%d-%H%M")))
         os.mkdir(self.out_dir) if not os.path.exists(self.out_dir) else None
         self.work_dir = workdir if workdir is not None else tempfile.mkdtemp(prefix=f"Simulator_{self.sim_name}")
+        os.mkdir(self.work_dir) if not os.path.exists(self.work_dir) else None
         self.save_data = save_data
         self.save_parameters_on_output_matrix = save_parameters_on_output_matrix
 
@@ -96,32 +97,32 @@ class Simulator(Alleles, PhyloTree):
                     continue
 
                 ##Check point for the number of alleles
-                if self.n_alleles < 3:
+                if self.n_alleles < 3: ## Some calculations raise error after this point
                     print(f"Simulation number {self.sim_number} has less than 3 alleles")
-                    #shutil.rmtree(out_sim_dir)
+                    # shutil.rmtree(out_sim_dir)
                     continue
+
+                ##Calculate allele statistics and allele freqs of FWsim
+                try:
+                    self._run_Alleles()
+                except Exception as e:
+                    print(f"Run Alleles failed for {self.sim_number}", e)
+                    # shutil.rmtree(out_sim_dir)
+                    #continue
+                    raise e
 
                 try:  ##FIXME: sometimes Maple cannot construct tree from diverse seqeunces or seqeunce length does not add up
                     self._run_MAPLE()
                 except Exception as e:
                     print(f"Maple failed for simulation number {self.sim_number}", e)
                     #shutil.rmtree(out_sim_dir)
-                    continue
-
-                ##Calculate allele statistics from Maple file and allele freqs of FWsim
-                try:
-                    self._run_Alleles()
-                except Exception as e:
-                    print(f"Run Alleles failed for {self.sim_number}", e)
-                    #shutil.rmtree(out_sim_dir)
-                    continue
+                    #continue
 
                 try:
                     self._run_PhyloTree()
                 except Exception as e:  ##Sometimes when the tree is so small, it raises Exception
                     print(f"PhyloTree failed for {self.sim_number}", e)
                     #shutil.rmtree(out_sim_dir)
-                    continue
 
                 self.sumsts_matrix[(i - 1) * self.n_batches:i * self.n_batches,:len(self.tree_stats_idx)] = self.tree_stats
                 self.sumsts_matrix[(i - 1) * self.n_batches:i * self.n_batches, len(self.tree_stats_idx):] = self.allele_stats
@@ -151,7 +152,8 @@ class Simulator(Alleles, PhyloTree):
         ## Re-initiate n_alleles, allele frequencies, mutation rates and n_individuals
         self.reinitialize_params_and_frequencies(mutation_rates=mu, n_individuals=ne)
         self.simulate_population()
-        self._filter_allele_freq(self.filter_below)
+        if self.filter_below is not None:
+            self._filter_allele_freq(self.filter_below)
         #### Sets out fasta that will be used by the MAPLE
         self.write_to_fasta(self.out_fasta)
 
@@ -165,7 +167,7 @@ class Simulator(Alleles, PhyloTree):
         self.get_summary_statistics()
 
     def _run_Alleles(self):
-        self._init_haplotype_array(self.maple_sequences_path)
+        self._init_haplotype_array()
         self.calculate_allele_stats()
 
     def _create_new_dir(self, repeat_idx):
@@ -173,7 +175,7 @@ class Simulator(Alleles, PhyloTree):
         ## ELFI does not run inside the class, but gives each value from outside
         ## In order to follow simulation number, this function follows the simulation number from directory name and number
         sim_dir = f"Sim_{repeat_idx}"
-        outpath = os.path.join(self.work_dir, sim_dir)
+        outpath = os.path.abspath(os.path.join(self.work_dir, sim_dir))
         if os.path.exists(outpath):
             sim_num = max(
                 list(map(lambda x: int(x.split("_")[-1]),
@@ -183,7 +185,7 @@ class Simulator(Alleles, PhyloTree):
             sim_dir = f"Sim_{sim_num + 1}"
             outpath = os.path.join(self.work_dir, sim_dir)
             self.sim_number = sim_num
-
+            return outpath
         os.mkdir(outpath)
         return outpath
 
