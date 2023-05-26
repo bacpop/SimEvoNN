@@ -11,7 +11,7 @@ from lib.alleles import Alleles
 import os
 import time
 from config import DATA_PATH
-from utils import run_maple
+from utils import create_maple_tree
 
 
 class Simulator(Alleles, PhyloTree):
@@ -33,7 +33,7 @@ class Simulator(Alleles, PhyloTree):
     def __init__(self, input_fasta: str, n_repeats: int, n_batches: int = 1,
                  n_generations: int = None, n_individuals: int = None,
                  mutation_rate: float = None, max_mutations: int = None,
-                 filter_allele_freq_below=None, tree_path: str = None, out_fast: str = None,
+                 filter_allele_freq_below=None, tree_path: str = None,
                  outdir: str = None, workdir: str = None, save_data=True,
                  save_parameters_on_output_matrix=False,
                  sim_name: str = None, prior_parameters: dict = None
@@ -49,10 +49,9 @@ class Simulator(Alleles, PhyloTree):
 
         self.in_fasta = input_fasta
         # self.tree_path = os.path.join(self.out_dir, "alleles.tree")
-        self.out_fasta = out_fast if out_fast is not None else tempfile.mktemp(suffix=".fasta",
+        self.maple_sequences_path = tempfile.mktemp(prefix=self.sim_name, suffix=".txt",
                                                                                dir=self.work_dir)  #### Will be set after running FWSim, required to construct the tree
         self.tree_path = None
-        self.maple_sequences_path = None
 
         self.n_repeats = n_repeats
         self.n_batches = n_batches
@@ -89,12 +88,12 @@ class Simulator(Alleles, PhyloTree):
                 self._create_new_dir(self.sim_number)
                 print(f"Running simulation {self.sim_number}...")
 
-                try:
-                    self._run_FWSim(ne=ne, mu=mu)
-                except Exception as e:
-                    print(f"Wright-Fisher simulator failed for simulation number {self.sim_number}", e)
+                #try:
+                self._run_FWSim(ne=ne, mu=mu)
+                #except Exception as e:
+                #    print(f"Wright-Fisher simulator failed for simulation number {self.sim_number}", e)
                     #shutil.rmtree(out_sim_dir)
-                    continue
+                #    continue
 
                 ##Check point for the number of alleles
                 if self.n_alleles < 3: ## Some calculations raise error after this point
@@ -154,12 +153,12 @@ class Simulator(Alleles, PhyloTree):
         self.simulate_population()
         if self.filter_below is not None:
             self._filter_allele_freq(self.filter_below)
-        #### Sets out fasta that will be used by the MAPLE
-        self.write_to_fasta(self.out_fasta)
+        #### writes a maple file that will be used by the MAPLE to construct tree
+        self.write_MAPLE_file(self.maple_sequences_path)
 
     def _run_MAPLE(self):
         ### Run MAPLE
-        self.tree_path, self.maple_sequences_path = run_maple(self.out_fasta)
+        self.tree_path = create_maple_tree(self.maple_sequences_path)
 
     def _run_PhyloTree(self):
         ### Construct the tree from the MAPLE output and get summary statistics

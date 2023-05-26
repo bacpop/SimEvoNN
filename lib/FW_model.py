@@ -446,3 +446,18 @@ class FWSim:
 
         return rv_list
 
+    def write_MAPLE_file(self, maple_file_path):
+        with open(maple_file_path, "w") as fh:
+            for idx, seq_represents in self.allele_mutation_indices.items():
+                if idx == 0 and seq_represents == []:  ## no mutation representation for reference
+                    fh.write(f">reference\n{self.initial_allele_seq[0].lower()}\n>Sample{str(0)}\n")
+                    continue
+                fh.write(f">Sample{idx}\n")
+                ### Maple requires sorted positions
+                positions_lines = {}
+                for seq_represent in seq_represents:
+                    from_idx, ref, alt, bp_pos = seq_represent
+                    positions_lines[bp_pos] = f"{alt.lower()}\t{str(bp_pos+1)}\n"
+
+                for bp_pos in sorted(positions_lines.keys()):
+                    fh.write(positions_lines[bp_pos])

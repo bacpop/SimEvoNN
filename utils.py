@@ -45,3 +45,12 @@ def run_maple(input_fasta_path):
 
     tree_path = os.path.join(input_dir, "_tree.tree")
     return tree_path, temp_maple_file
+
+
+def create_maple_tree(maple_file):
+    import MAPLE
+    import os
+    output_dir = os.path.dirname(maple_file)
+    call_subprocess("pypy", [MAPLE.run_Maple, "--input", maple_file, "--output", f"{output_dir}/", "--overwrite"])
+    tree_path = os.path.join(output_dir, "_tree.tree")
+    return tree_path
