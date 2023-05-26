@@ -276,9 +276,8 @@ class FWSim:
                 counts = self.mutation_event(number_of_mutations)
 
                 selected_allele_counts[:self.n_alleles] = selected_allele_counts[:self.n_alleles] - number_of_mutations
-                for allele, counts in counts.items():
-                    _idx = int(self._get_index(allele))
-                    selected_allele_counts[_idx] += counts
+                for allele_idx, count in counts.items():
+                    selected_allele_counts[allele_idx] += count
 
             ### Update allele frequency matrix
             self.allele_freq[generation, :] = selected_allele_counts / self.n_individuals
@@ -302,56 +301,63 @@ class FWSim:
 
     def mutation_event(self, number_of_mutations):
         ### Get new mutations, update allele indices and outputs mutation counts
-        ##TODO: parent_idx, child_idx, init_nuc, mutated_nuc, base_pair_loc --> represent a new sequence
         ###TODO: Think of optimising this part (using numpy arrays)
-        no_mutation_counts = {}
-        mutation_counts = {}
+        #no_mutation_counts = {}
+        #mutation_counts = {}
         counts = {}
         for allele_idx, allele_count in enumerate(number_of_mutations):
             for c in range(allele_count):
                 ##Simulate mutation to get de-novo sequence
                 mutated_seq, bp_loc, mutated_nuc, init_nuc = self.simulate_mutation(self.allele_indices[allele_idx])
                 seq_representation = (allele_idx, init_nuc, mutated_nuc, bp_loc)
+                len_indices = len(self.allele_indices)
                 ##Check if the sequence is already in the dictionary
-                if seq_representation not in self.allele_mutation_indices_set and allele_idx in self.allele_indices.keys():
+                exceeds_mutation_size = len_indices >= self.max_mutation_size
+                new_mutation = all([
+                    seq_representation not in self.allele_mutation_indices_set,
+                    init_nuc != mutated_nuc,
+                    not exceeds_mutation_size
+                ])
+
+                existing_mutation = all([
+                    seq_representation in self.allele_mutation_indices_set,
+                    init_nuc != mutated_nuc,
+                ])
+
+                no_mutation = all([
+                    init_nuc == mutated_nuc,
+                ])
+
+                if new_mutation:
                     self.allele_mutation_indices_set.add(seq_representation)
-                    len_indices = len(self.allele_indices)
                     ### Keep track of the mutation indices and allele indices
                     if allele_idx in self.allele_mutation_indices.keys():
                         ## Keep in minde that the mutation locations are relative to the original sequence
                         self.allele_mutation_indices[len_indices] = self.allele_mutation_indices[allele_idx].copy()
                         self.allele_mutation_indices[len_indices].append(seq_representation)
                     else:
-                        print("New allele")
                         self.allele_mutation_indices[len_indices] = [seq_representation]
 
                     self.allele_indices[len_indices] = mutated_seq
-                    mutation_counts[seq_representation] = 1
-                    counts[mutated_seq] = 1
-                    continue
+                    #mutation_counts[seq_representation] = 1
+                    counts[len_indices] = 1
 
-                ## If the sequence is already in the dictionary, update the counts
-                if seq_representation in mutation_counts.keys():
-                    mutation_counts[seq_representation] += 1
-                    counts[mutated_seq] += 1
-                elif seq_representation in no_mutation_counts.keys():
-                    no_mutation_counts[seq_representation] += 1
-                    counts[mutated_seq] += 1
+                elif existing_mutation:
+                    ## find the index of the mutated sequence
+                    existing_idx = self._get_index(mutated_seq)
+                    counts.setdefault(existing_idx, 0)
+                    counts[existing_idx] += 1
+
+                elif no_mutation:
+                    counts.setdefault(allele_idx, 0)
+                    counts[allele_idx] += 1
+
+                elif exceeds_mutation_size: continue  ## discard new mutations
+
                 else:
-                    no_mutation_counts[seq_representation] = 1
-                    counts[mutated_seq] = 1
+                    raise ValueError("Invalid sequence")
+
         return counts
-    """         if mutated_seq in mutation_counts.keys():
-                    mutation_counts[mutated_seq] += 1
-                    counts[mutated_seq] += 1
-                elif mutated_seq in no_mutation_counts.keys():
-                    no_mutation_counts[mutated_seq] += 1
-                    counts[mutated_seq] += 1
-                else:
-                    no_mutation_counts[mutated_seq] = 1
-                    counts[mutated_seq] = 1
-
-        return counts"""
 
     def _get_index(self, sequence):
         for key, value in self.allele_indices.items():
