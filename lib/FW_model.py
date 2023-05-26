@@ -366,7 +366,6 @@ class FWSim:
         return allele_freq
 
     def _update_allele_indices(self, array:np.array):
-        ###TODO: Include update of mutation indices
         updated_allele_indices = {}
         updated_mutations_indices = {}
         return_idx_counter = 0
