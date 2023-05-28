@@ -156,6 +156,7 @@ class FWSim:
         self.max_mutation_size = max_mutation_size if max_mutation_size is not None else 4**len(initial_allele_seq[0])
 
         self.n_alleles = len(initial_allele_seq) if isinstance(initial_allele_seq, list) else 1
+        self.len_dna_sequence = len(initial_allele_seq[0]) if isinstance(initial_allele_seq, list) else len(initial_allele_seq)
         self.allele_freq = None
         self.allele_mutation_indices = None ## Holds seq_id: [(bp_location, nucleotide), ...]
         self.allele_mutation_indices_set = None
@@ -227,11 +228,9 @@ class FWSim:
         :return:
         """
 
+        b_loc = np.random.randint(0, self.len_dna_sequence)
+        nucleotide = dna_sequence[b_loc]
         nucleotides = ["A", "C", "G", "T"]
-        out_sequence = list(dna_sequence)
-        b_loc = np.random.randint(0, len(dna_sequence))
-        nucleotide = out_sequence[b_loc]
-        mutated_to = None
 
         if nucleotide == "A":
             mutated_to = np.random.choice(nucleotides, p=self.mutation_matrix[0, :])
@@ -242,11 +241,12 @@ class FWSim:
         elif nucleotide == "T":
             mutated_to = np.random.choice(nucleotides, p=self.mutation_matrix[3, :])
         else:
-            raise ValueError("Invalid nucleotide")
+            print("Warning: Invalid nucleotide")
+            mutated_to = nucleotide
+            return dna_sequence, b_loc, mutated_to, nucleotide
 
-        out_sequence[b_loc] = mutated_to
         ### Update nucleotide mutation indices
-        return "".join(out_sequence), b_loc, mutated_to, nucleotide
+        return f"{dna_sequence[:b_loc]}{mutated_to}{dna_sequence[b_loc + 1:]}", b_loc, mutated_to, nucleotide
 
     @staticmethod
     def _choose_mutated_alleles(alleles):
@@ -358,6 +358,14 @@ class FWSim:
                     raise ValueError("Invalid sequence")
 
         return counts
+
+    def _get_initial_seq_index(self, seq_idx):
+        ## Traces back to origin of a given idx
+        while seq_idx > len(self.initial_allele_seq)-1:
+            seq_idx = self.allele_mutation_indices[seq_idx][0][0]
+        return seq_idx
+
+
 
     def _get_index(self, sequence):
         for key, value in self.allele_indices.items():

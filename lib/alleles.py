@@ -58,8 +58,8 @@ class Alleles(FWSim):
     def _init_haplotype_array(self, maple_file=None):
         self.sequences_mut_array = np.zeros(
             [
-                len(self.allele_indices),  ## Number of sequences, i.e. number of haplotypes
-                len(self.allele_indices[0])  ## Reference sequence length, i.e. number of variants
+                self.n_alleles,  ## Number of sequences, i.e. number of haplotypes
+                self.len_dna_sequence  ## Reference sequence length, i.e. number of variants
             ], dtype='i1'
         )
 
