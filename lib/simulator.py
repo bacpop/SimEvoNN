@@ -213,9 +213,6 @@ class Simulator(Alleles, PhyloTree):
                     seq += line.strip()
                     old_seq = True
 
-                else:
-                    raise IOError(f"Line could not recognised\n{line}")
-
             rv_list.append(seq)
 
         return rv_list
