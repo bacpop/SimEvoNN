@@ -78,7 +78,8 @@ class Simulator(Alleles, PhyloTree):
         # self.sumsts_matrix = np.zeros([n_repeats], dtype=[(keyname, data_type) for keyname in self.tree_stats_idx.keys()])
         self.sumsts_matrix = np.zeros(
             [n_repeats * n_batches, len(self.tree_stats_idx) + len(self.allele_stats_indices)])
-        self.resulting_matrix = None
+        self.resulting_matrix = None if not save_parameters_on_output_matrix else np.zeros(
+            [n_repeats * n_batches, len(self.tree_stats_idx) + len(self.allele_stats_indices) + 4])
 
     def run(self):
         for i in range(1, self.n_repeats + 1):
@@ -135,14 +136,17 @@ class Simulator(Alleles, PhyloTree):
                     self._mv_maple_outputs(out_dir)
 
             if self.save_parameters_on_output_matrix:
-                self.resulting_matrix = np.c_[
+                self.resulting_matrix[(i - 1) * self.n_batches,:] = np.c_[
                     self.sumsts_matrix[(i - 1) * self.n_batches:i * self.n_batches], np.array([ne, mu, self.n_generations, self.max_mutation_size]) * np.ones(
                         [self.n_batches, 4])
                 ]
-            else:
-                self.resulting_matrix = self.sumsts_matrix
 
-        np.save(os.path.join(self.out_dir, f"{self.sim_name}_results.npy"), self.resulting_matrix)
+        if self.resulting_matrix is None:
+            self.resulting_matrix = self.sumsts_matrix
+
+        if self.save_data:
+            np.save(os.path.join(self.out_dir, f"{self.sim_name}_results.npy"), self.resulting_matrix)
+
         shutil.rmtree(self.work_dir)
 
     def _run_FWSim(self, ne, mu):
@@ -208,6 +212,9 @@ class Simulator(Alleles, PhyloTree):
                 elif line[0].lower() in {"a", "c", "g", "t", "n"}:
                     seq += line.strip()
                     old_seq = True
+
+                else:
+                    raise IOError(f"Line could not recognised\n{line}")
 
             rv_list.append(seq)
 
