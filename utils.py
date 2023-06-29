@@ -51,6 +51,10 @@ def create_maple_tree(maple_file):
     import MAPLE
     import os
     output_dir = os.path.dirname(maple_file)
-    call_subprocess("pypy", [MAPLE.run_Maple, "--input", maple_file, "--output", f"{output_dir}/", "--overwrite"])
+    try:
+        call_subprocess("pypy", [MAPLE.run_Maple, "--input", maple_file, "--output", f"{output_dir}/", "--overwrite"])
+    except FileNotFoundError:
+        call_subprocess("python", [MAPLE.run_Maple, "--input", maple_file, "--output", f"{output_dir}/", "--overwrite"])
+
     tree_path = os.path.join(output_dir, "_tree.tree")
     return tree_path

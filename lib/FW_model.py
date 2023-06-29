@@ -156,6 +156,7 @@ class FWSim:
         self.max_mutation_size = max_mutation_size if max_mutation_size is not None else 4**len(initial_allele_seq[0])
 
         self.n_alleles = len(initial_allele_seq) if isinstance(initial_allele_seq, list) else 1
+        self.len_dna_sequence = len(initial_allele_seq[0]) if isinstance(initial_allele_seq, list) else len(initial_allele_seq)
         self.allele_freq = None
         self.allele_mutation_indices = None ## Holds seq_id: [(bp_location, nucleotide), ...]
         self.allele_mutation_indices_set = None
@@ -227,11 +228,9 @@ class FWSim:
         :return:
         """
 
+        b_loc = np.random.randint(0, self.len_dna_sequence)
+        nucleotide = dna_sequence[b_loc]
         nucleotides = ["A", "C", "G", "T"]
-        out_sequence = list(dna_sequence)
-        b_loc = np.random.randint(0, len(dna_sequence))
-        nucleotide = out_sequence[b_loc]
-        mutated_to = None
 
         if nucleotide == "A":
             mutated_to = np.random.choice(nucleotides, p=self.mutation_matrix[0, :])
@@ -242,11 +241,12 @@ class FWSim:
         elif nucleotide == "T":
             mutated_to = np.random.choice(nucleotides, p=self.mutation_matrix[3, :])
         else:
-            raise ValueError("Invalid nucleotide")
+            print("Warning: Invalid nucleotide")
+            mutated_to = nucleotide
+            return dna_sequence, b_loc, mutated_to, nucleotide
 
-        out_sequence[b_loc] = mutated_to
         ### Update nucleotide mutation indices
-        return "".join(out_sequence), b_loc, mutated_to, nucleotide
+        return f"{dna_sequence[:b_loc]}{mutated_to}{dna_sequence[b_loc + 1:]}", b_loc, mutated_to, nucleotide
 
     @staticmethod
     def _choose_mutated_alleles(alleles):
@@ -359,6 +359,14 @@ class FWSim:
 
         return counts
 
+    def _get_initial_seq_index(self, seq_idx):
+        ## Traces back to origin of a given idx
+        while seq_idx > len(self.initial_allele_seq)-1:
+            seq_idx = self.allele_mutation_indices[seq_idx][0][0]
+        return seq_idx
+
+
+
     def _get_index(self, sequence):
         for key, value in self.allele_indices.items():
             if value == sequence:
@@ -392,14 +400,16 @@ class FWSim:
         self.allele_freq = allele_freq
         return self.allele_freq
 
-    def save_simulation(self, out_fasta_path=None, out_freq_path=None, out_parameters_path=None):
-        out_fasta_path = os.path.join(self.outdir, "fw_sequences.fasta") if not out_fasta_path else out_fasta_path
-        out_freq_path = os.path.join(self.outdir, "fw_freq.npy") if not out_freq_path else out_freq_path
-        out_parameters_path = os.path.join(self.outdir, "fw_parameters.json") if not out_parameters_path else out_parameters_path
+    def save_simulation(self, out_fasta_path=None, out_freq_path=None, out_parameters_path=None, outdir=None):
+        outdir = outdir if outdir is not None else self.outdir
+        out_fasta_path = os.path.join(outdir, "fw_sequences.fasta") if not out_fasta_path else out_fasta_path
+        out_freq_path = os.path.join(outdir, "fw_freq.npy") if not out_freq_path else out_freq_path
+        out_parameters_path = os.path.join(outdir, "fw_parameters.json") if not out_parameters_path else out_parameters_path
         self.save_parameters(out_parameters_path)
         self.save_allele_freq(out_freq_path)
         self.write_to_fasta(out_fasta_path)
-        self.plot_allele_freq(save_fig=True, file_name=os.path.join(self.outdir,'allele_freq.png'), dont_plot=True)
+        self.plot_allele_freq(save_fig=True, file_name=os.path.join(outdir,'allele_freq.png'), dont_plot=True)
+        self.plot_allele_freq_line(save_fig=True, file_name=os.path.join(outdir,'allele_freq_line.png'), dont_plot=True)
         #os.replace('allele_freq.png', os.path.join(self.outdir, 'allele_freq.png'))
 
     def plot_allele_freq(self, filter_below=None, save_fig=True, file_name='allele_freq.png', dont_plot=False):
@@ -410,10 +420,29 @@ class FWSim:
         plt.figure(figsize=(20, 10))
         allele_to_plot = self.allele_freq[:, :len(self.allele_indices)]
         plt.imshow(allele_to_plot, cmap='viridis')
-        plt.xticks(np.arange(len(self.allele_indices)), list(self.allele_indices.values()), rotation=90)
+        plt.xticks(np.arange(len(self.allele_indices)), [f"Sample_{i}" for i in self.allele_indices.keys()], rotation=90)
         plt.xlabel('Alleles')
         plt.ylabel('Generations')
         plt.colorbar()
+        if save_fig:
+            plt.savefig(file_name)
+        if dont_plot:
+            plt.close()
+            return None
+        plt.show()
+
+    def plot_allele_freq_line(self, filter_below=None, save_fig=True, file_name='allele_freq_line.png', dont_plot=False):
+        import matplotlib.pyplot as plt
+        if filter_below:
+            self._filter_allele_freq(filter_below=filter_below)
+
+        plt.figure(figsize=(20, 10))
+        allele_to_plot = self.allele_freq[:, :len(self.allele_indices)]
+        for i in range(allele_to_plot.shape[1]):
+            plt.plot(allele_to_plot[:,i], label=f"Sample_{i}", alpha=0.9, linewidth=3)
+        plt.xlabel('Generations')
+        plt.ylabel('Allele Frequency')
+        plt.legend()
         if save_fig:
             plt.savefig(file_name)
         if dont_plot:

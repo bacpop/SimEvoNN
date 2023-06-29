@@ -8,7 +8,7 @@ class Alleles(FWSim):
     allele_stats_indices = {
         'pi':0, ## Sequence diversity
         'theta_w':1,
-        'tajimas_d':2,
+        'tajimas_d':2, ##FIXME: calculates wrongly
         'f_st':3,
         'f_is':4,
         'entropy':5,
@@ -55,15 +55,15 @@ class Alleles(FWSim):
         self.allele_stats = np.zeros(len(self.allele_stats_indices))
         self.allele_counts_array, self.n_variants, self.n_haplotypes = None, None, None
 
-    def _init_haplotype_array(self, maple_file=None):
+    def _init_haplotype_array(self, maple_file=None): ##FIXME: not n_alleles but last generations sequences count
         self.sequences_mut_array = np.zeros(
             [
-                len(self.allele_indices),  ## Number of sequences, i.e. number of haplotypes
-                len(self.allele_indices[0])  ## Reference sequence length, i.e. number of variants
+                self.n_alleles,  ## Number of sequences, i.e. number of haplotypes
+                self.len_dna_sequence  ## Reference sequence length, i.e. number of variants
             ], dtype='i1'
         )
 
-        self.variants_dict = {pos: [ref.lower()] for pos, ref in enumerate(self.allele_indices[0])}
+        self.variants_dict = {pos: [ref.lower()] for pos, ref in enumerate(self.initial_allele_seq[0])}
         if maple_file:
             self._construct_haplotypes_from_maple_variants_file(maple_file)
         else:
