@@ -30,7 +30,7 @@ def plot_SIR(t, S, I, R, N=1000):
     ax.plot(t, I/N, 'r', alpha=0.5, lw=2, label='Infected')
     ax.plot(t, R/N, 'g', alpha=0.5, lw=2, label='Recovered with immunity')
     ax.set_xlabel('Time /days')
-    ax.set_ylabel(f'Number ({N}s)')
+    ax.set_ylabel(f'Population Size ({N}s)')
     ax.set_ylim(0,1.2)
     ax.yaxis.set_tick_params(length=0)
     ax.xaxis.set_tick_params(length=0)
@@ -169,7 +169,7 @@ plot_simulation(infected, susceptible, recovered)
 
 ### Vectroized SIR model
 
-def vectorised_SIR_simulator(beta: np.array, gamma: np.array, n_init_infected, N, n_days, n_obs=1, batch_size=1,
+def vectorised_SIR_simulator(beta: np.array, gamma: np.array, n_init_infected, N, n_days, n_obs=1, deterministic=False, batch_size=1,
                              random_state=None):
     # Simulate model
     #### INITIAL CONDITIONS ####
@@ -188,19 +188,21 @@ def vectorised_SIR_simulator(beta: np.array, gamma: np.array, n_init_infected, N
 
     for i in range(1, n_days):
         for j in range(n_obs):
+            if deterministic:
             ## Deterministic model
-            # sir_matrix[i,0,j] = sir_matrix[i-1,0,j] + beta*sir_matrix[i-1,0,j]*sir_matrix[i-1,2,j]/N - gamma*sir_matrix[i-1,0,j]
-            # sir_matrix[i,1,j] = sir_matrix[i-1,1,j] + gamma*sir_matrix[i-1,0,j]
-            # sir_matrix[i,2,j] = sir_matrix[i-1,2,j] - beta*sir_matrix[i-1,0,j]*sir_matrix[i-1,2,j]/N
+                sir_matrix[i,0,j] = sir_matrix[i-1,0,j] + beta[j]*sir_matrix[i-1,0,j]*sir_matrix[i-1,2,j]/N - gamma[j]*sir_matrix[i-1,0,j]
+                sir_matrix[i,1,j] = sir_matrix[i-1,1,j] + gamma[j]*sir_matrix[i-1,0,j]
+                sir_matrix[i,2,j] = sir_matrix[i-1,2,j] - beta[j]*sir_matrix[i-1,0,j]*sir_matrix[i-1,2,j]/N
 
+            else:
             ## Stochastic model
-            p_IR = 1 - math.e ** -gamma[j]
-            p_SI = 1 - math.e ** (-beta[j] * sir_matrix[i - 1, 0, j] / N)
-            recovering = random_state.binomial(sir_matrix[i - 1, 0, j], p_IR)
-            sir_matrix[i, 0, j] = sir_matrix[i - 1, 0, j] + random_state.binomial(sir_matrix[i - 1, 2, j],
-                                                                                  p_SI) - recovering
-            sir_matrix[i, 1, j] = sir_matrix[i - 1, 1, j] + recovering
-            sir_matrix[i, 2, j] = N - sir_matrix[i, 0, j] - sir_matrix[i, 1, j]
+                p_IR = 1 - math.e ** -gamma[j]
+                p_SI = 1 - math.e ** (-beta[j] * sir_matrix[i - 1, 0, j] / N)
+                recovering = random_state.binomial(sir_matrix[i - 1, 0, j], p_IR)
+                sir_matrix[i, 0, j] = sir_matrix[i - 1, 0, j] + random_state.binomial(sir_matrix[i - 1, 2, j],
+                                                                                      p_SI) - recovering
+                sir_matrix[i, 1, j] = sir_matrix[i - 1, 1, j] + recovering
+                sir_matrix[i, 2, j] = N - sir_matrix[i, 0, j] - sir_matrix[i, 1, j]
 
             assert sir_matrix[i, 1, j] + sir_matrix[i, 0, j] + sir_matrix[i, 2, j] == N, "Population size not conserved"
 

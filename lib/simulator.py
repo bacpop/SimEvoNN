@@ -83,7 +83,7 @@ class Simulator(Alleles, PhyloTree):
 
     def run(self):
         for i in range(1, self.n_repeats + 1):
-            ne, mu = np.random.randint(1, 1000), np.random.uniform(0, 1)
+            ne, mu = (np.random.randint(1, 1000), np.random.uniform(0, 1)) if self.mutation_rate is None or self.n_individuals is None else (self.n_individuals, self.mutation_rate)
             for b in range(1, self.n_batches+1):
                 self.sim_number += 1
                 self._create_new_dir(self.sim_number)
@@ -131,8 +131,11 @@ class Simulator(Alleles, PhyloTree):
                     out_dir = os.path.join(self.out_dir, f"Sim_{self.sim_number}")
                     os.mkdir(out_dir) if not os.path.exists(out_dir) else None
                     self.save_stats(os.path.join(out_dir, 'tree_stats.json'))
-                    self.save_tree(os.path.join(out_dir, 'tree.png'))
-                    self.save_simulation(out_dir)
+                    try:
+                        self.save_tree(os.path.join(out_dir, 'tree.png'))
+                    except ModuleNotFoundError:
+                        pass
+                    self.save_simulation(outdir=out_dir)
                     self._mv_maple_outputs(out_dir)
 
             if self.save_parameters_on_output_matrix:
@@ -232,8 +235,8 @@ class Simulator(Alleles, PhyloTree):
 
 def simulator(n_individuals, mutation_rate,  ### These are for Priors
               input_fasta, n_generations, max_mutations, work_dir=None,
-              save_data=False, filter_below=0.0,n_repeats=1,
-              batch_size=1, random_state=None, add_parameters=False, outdir=None, dtype=np.float32
+              save_data=False, filter_below=0.0,n_repeats=1, change_indices:dict=None,
+              batch_size=1, random_state=None, add_parameters=False, outdir=None, dtype=np.float32,
               ):
     """Wrapper for the simulator to make it compatible with the ELFI model
 
@@ -274,4 +277,10 @@ def simulator(n_individuals, mutation_rate,  ### These are for Priors
                   )
 
     s.run()
+    if change_indices is not None:
+        from config import SS_INDICES
+        res = np.zeros(len(change_indices))
+        for k,v in change_indices.items():
+            res[v] = s.resulting_matrix[:,SS_INDICES[k]]
+        return res
     return s.resulting_matrix

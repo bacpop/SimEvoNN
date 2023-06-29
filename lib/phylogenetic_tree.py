@@ -37,6 +37,7 @@ the left and the right side [49]
 staircaseness_2 Mean ratio of the minimal number of leaves on a side over the maximal number of leaves
 on a side, for each internal node [49, 50]
 """
+import ete3
 import numpy as np
 from ete3 import Tree
 from ete3.parser.newick import NewickError

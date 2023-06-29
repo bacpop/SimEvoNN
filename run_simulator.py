@@ -36,16 +36,16 @@ def run_simulator(args):
     ## Run simulations
     m = simulator(
                 n_generations=args.n_generations,
-                n_individuals=None, ## Class randomly generates this
+                n_individuals=args.n_individuals, ## Class randomly generates this
                 max_mutations=args.max_mutations,
                 batch_size=args.batch_size,
                 n_repeats=args.n_simulations,
-                mutation_rate=None, ## Class randomly generates this
+                mutation_rate=args.mutation_rate, ## Class randomly generates this
                 input_fasta=input_fasta,
                 work_dir=args.workdir,
                 outdir=output_dir,
                 filter_below=args.filter_below,
-                save_data=False,
+                save_data=args.save_all_data,
                 add_parameters=True
             )
 
@@ -60,14 +60,15 @@ if __name__ == '__main__':
     parser.add_argument('--sim_name', type=str, help='Name of your simulation', required=False, default="simulation")
     parser.add_argument('--input_fasta', type=str, help='Input fasta file. If not provided, uses a predefined one', required=False, default=None)
     parser.add_argument('--n_generations', type=int, help='Number of generations to simulate', required=False, default=20)
-    #parser.add_argument('--n_individuals', type=int, help='Number of individuals to simulate', required=False)
-    #parser.add_argument('--mutation_rate', type=float, help='Mutation rate to simulate', required=False)
+    parser.add_argument('--n_individuals', type=int, help='Number of individuals to simulate', required=False, default=None)
+    parser.add_argument('--mutation_rate', type=float, help='Mutation rate to simulate', required=False, default=None)
     parser.add_argument('--max_mutations', type=int, help='Maximum number of mutations to simulate', required=False, default=200)
     parser.add_argument('--batch_size', type=int, help='Batch size to simulate', required=False, default=1)
     parser.add_argument('--workdir', type=str, help='Work directory to simulate', required=False, default=None)
     parser.add_argument('--filter_below', type=float, help='Filter below', required=False, default=None)
     parser.add_argument('--outdir', type=str, help='Output directory for simulations', required=False, default=None)
-    parser.add_argument('--compress', action='store_true', help='Output directory for simulations', required=False)
+    parser.add_argument('--compress', action='store_true', help='Compress the output files', required=False)
+    parser.add_argument('--save_all_data', action='store_true', help='Save all data regarding the simulations', required=False)
 
     args = parser.parse_args()
 
