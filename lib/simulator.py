@@ -123,9 +123,8 @@ class Simulator(Alleles, PhyloTree):
                 except Exception as e:  ##Sometimes when the tree is so small, it raises Exception
                     print(f"PhyloTree failed for {self.sim_number}", e)
                     #shutil.rmtree(out_sim_dir)
-
-                self.sumsts_matrix[(i - 1) * self.n_batches:i * self.n_batches,:len(self.tree_stats_idx)] = self.tree_stats
-                self.sumsts_matrix[(i - 1) * self.n_batches:i * self.n_batches, len(self.tree_stats_idx):] = self.allele_stats
+                self.sumsts_matrix[(i - 1) * self.n_batches + b - 1:(i - 1) * self.n_batches + b,:len(self.tree_stats_idx)] = self.tree_stats
+                self.sumsts_matrix[(i - 1) * self.n_batches + b - 1:(i - 1) * self.n_batches + b, len(self.tree_stats_idx):] = self.allele_stats
 
                 if self.save_data:
                     out_dir = os.path.join(self.out_dir, f"Sim_{self.sim_number}")
@@ -139,7 +138,7 @@ class Simulator(Alleles, PhyloTree):
                     self._mv_maple_outputs(out_dir)
 
             if self.save_parameters_on_output_matrix:
-                self.resulting_matrix[(i - 1) * self.n_batches,:] = np.c_[
+                self.resulting_matrix[(i - 1) * self.n_batches:i * self.n_batches,:] = np.c_[
                     self.sumsts_matrix[(i - 1) * self.n_batches:i * self.n_batches], np.array([ne, mu, self.n_generations, self.max_mutation_size]) * np.ones(
                         [self.n_batches, 4])
                 ]
@@ -173,6 +172,7 @@ class Simulator(Alleles, PhyloTree):
         self.get_summary_statistics()
 
     def _run_Alleles(self):
+        self.reset_stats()
         self._init_haplotype_array()
         self.calculate_allele_stats()
 
