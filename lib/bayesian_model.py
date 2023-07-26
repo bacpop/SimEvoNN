@@ -607,4 +607,4 @@ bolfi_wf = BOLFI4WF(
     save_simulations=False,
 )
 
-bolfi_wf.run_bolfi()
+#bolfi_wf.run_bolfi()

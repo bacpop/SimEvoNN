@@ -384,7 +384,7 @@ class FWSim:
         updated_mutations_indices = {}
         return_idx_counter = 0
         for idx, boolean in enumerate(array):
-            if len(self.allele_indices) < idx: ###Number of new sequences cannot be more than the indexed sequences
+            if len(self.allele_indices) <= idx: ###Number of new sequences cannot be more than the indexed sequences
                 break
 
             if idx < len(self.initial_allele_seq) or boolean:  ### Do not change indices for initial sequences

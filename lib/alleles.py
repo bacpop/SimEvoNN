@@ -134,7 +134,6 @@ class Alleles(FWSim):
         return allel.watterson_theta(self.positions, self.allele_counts_array)
 
     def calculate_tajimas_d(self):
-        self.tajimas_d = allel.tajima_d(self.allele_counts_array)
         return allel.tajima_d(self.allele_counts_array)
 
     def calculate_fst(self):
