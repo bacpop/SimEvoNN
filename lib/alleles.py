@@ -8,7 +8,7 @@ class Alleles(FWSim):
     allele_stats_indices = {
         'pi':0, ## Sequence diversity
         'theta_w':1,
-        'tajimas_d':2, ##FIXME: calculates wrongly
+        'tajimas_d':2,
         'f_st':3,
         'f_is':4,
         'entropy':5,
@@ -200,6 +200,7 @@ class Alleles(FWSim):
         for sed_id, seq_representation in self.allele_mutation_indices.items():
             for representation in seq_representation:
                 parent_idx, ref, alt, position = representation
+                alt = alt.lower()
                 self.variants_dict.setdefault(position, []).append(alt)
                 self.sequences_mut_array[sed_id, position] = self.variants_dict[position].index(alt)
 
