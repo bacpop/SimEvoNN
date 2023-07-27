@@ -26,7 +26,7 @@ def run_simulator(args):
 
     ## Check input arguments
     input_fasta = args.input_fasta if args.input_fasta is not None else FASTA_IN
-    output_dir = args.outdir if args.outdir is not None else os.path.join(DATA_PATH, "simulation_results")
+    output_dir = args.outdir if args.outdir is not None else os.path.join(DATA_PATH, "simulation_results", time.strftime("%Y%m%d-%H%M%S"))
     os.mkdir(output_dir) if not os.path.exists(output_dir) else None
     batch_size = args.batch_size
     total_simulations = args.n_simulations * batch_size
