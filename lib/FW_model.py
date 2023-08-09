@@ -59,7 +59,7 @@ def fisher_wright_simulator(
     if n_alleles > 2: dist_func = np.random.multinomial
     else: dist_func = np.random.binomial
 
-    allele_freq = np.zeros([n_generations, n_repeats, n_alleles], dtype=np.float8)
+    allele_freq = np.zeros([n_generations, n_repeats, n_alleles], dtype=np.float16)
 
     # Set the initial condition at the first step
     if set_allele_freq_equal:
@@ -177,7 +177,7 @@ class FWSim:
         self.initialize_allele_freq_matrix()
 
     def initialize_allele_freq_matrix(self):
-        self.allele_freq = np.zeros([self.n_generations, self.n_alleles+self.max_mutation_size], dtype=np.float8)
+        self.allele_freq = np.zeros([self.n_generations, self.n_alleles+self.max_mutation_size], dtype=np.float16)
         self.allele_freq[0, :self.n_alleles] = 1 / self.n_alleles
         self.allele_mutation_indices = {idx: [] for idx in range(self.n_alleles)}
         self.allele_mutation_indices_set = set()
@@ -190,7 +190,7 @@ class FWSim:
 
     @staticmethod
     def construct_mutation_matrix(mutation_rates=None):
-        mutation_matrix = np.zeros([4, 4], dtype=np.float8)
+        mutation_matrix = np.zeros([4, 4], dtype=np.float16)
         if mutation_rates is None:
             np.fill_diagonal(mutation_matrix, 1)
         elif isinstance(mutation_rates, float):  ## If one value is given, use it for all nucleotides
@@ -288,7 +288,7 @@ class FWSim:
 
     def simulate_individual(self): ##TODO: Non-functional
         ## initialize alleles matrix
-        population_matrix = np.zeros([self.n_generations, self.n_individuals], dtype=np.int8)
+        population_matrix = np.zeros([self.n_generations, self.n_individuals], dtype=np.int16)
         for generation in range(1, self.n_generations):
             for individual in range(self.n_individuals):
 
