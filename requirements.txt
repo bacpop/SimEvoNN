@@ -6,3 +6,4 @@ ete3
 six
 scikit-allel~=1.3.5
 pandas~=2.0.1
+PyQt5

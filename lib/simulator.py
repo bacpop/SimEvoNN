@@ -83,7 +83,7 @@ class Simulator(Alleles, PhyloTree):
 
     def run(self):
         for i in range(1, self.n_repeats + 1):
-            ne, mu = (np.random.randint(1, 1000), np.random.uniform(0, 1)) if self.mutation_rate is None or self.n_individuals is None else (self.n_individuals, self.mutation_rate)
+            ne, mu = (np.random.randint(1e+2, 1e+8), np.random.uniform(0, 1e-2)) if self.mutation_rate is None or self.n_individuals is None else (self.n_individuals, self.mutation_rate)
             for b in range(1, self.n_batches+1):
                 self.sim_number += 1
                 self._create_new_dir(self.sim_number)
