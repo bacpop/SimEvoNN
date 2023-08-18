@@ -17,20 +17,32 @@ def get_torch_data_loaders(df:pd.DataFrame, batch_size:int=64, shuffle:bool=True
 
 def get_nn_model(n_inputs:int, n_outputs:int, device:str="cpu"):
     class NeuralNetwork(nn.Module):
+        """
+        The FFNN for SS consists of one input layer with 99 input nodes (98 SS + the
+sampling probability), 4 sequential hidden layers organized in a funnel shape with
+64-32-16-8 neurons and 1 output layer of size 2–4 depending on the number of
+parameters to be estimated. The neurons of the last hidden layer have linear
+activation, while others have exponential linear activation.
+
+For both NNs, we use the Adam algorithm54 as optimizer and the Mean
+Absolute Percentage Error (MAPE) as loss function. The batch size is set to 8000.
+
+        """
         def __init__(self, n_inputs, n_outputs):
             super().__init__()
             # self.flatten = nn.Flatten()
             self.linear_relu_stack = nn.Sequential(
                 nn.Linear(n_inputs, n_inputs * 4),
-                nn.GELU(),
+                nn.ELU(),
                 nn.Linear(n_inputs * 4, n_inputs * 2),
-                nn.GELU(),
-                nn.Linear(n_inputs * 2, n_inputs // 2),
-                nn.GELU(),
-                nn.Linear(n_inputs // 2, n_outputs * 4),
-                nn.GELU(),
-                nn.Linear(n_outputs * 4, n_outputs),
-                nn.GELU()
+                nn.ELU(),
+                nn.Linear(n_inputs * 2, n_inputs),
+                nn.ELU(),
+                nn.Linear(n_inputs, n_outputs * 4),
+                nn.ELU(),
+                nn.Linear(n_outputs * 4, n_outputs * 2),
+                nn.ELU(),
+                nn.Linear(n_outputs * 2, n_outputs),
             )
 
         def forward(self, x):
@@ -55,6 +67,9 @@ def get_loss_fn(loss:str="mse"):
         return nn.HuberLoss()
     elif loss == "smooth_l1":
         return nn.SmoothL1Loss()
+    elif loss == "mape":
+        #from torchmetrics.regression import MeanAbsolutePercentageError
+        return None
     else:
         raise ValueError(f"Invalid loss function: {loss}")
 
@@ -181,8 +196,8 @@ def get_r2_array(dataloader,model, scaler, n_batches, plot=False, save_path="dat
             #values_array[counter,:,:] = ne_t, ne_p, mu_t, mu_p, ne_r2, mu_r2
 
             if plot:
-                ax_ne.scatter(ne_t, ne_p, alpha=0.7)#, label=f"batch_number {counter}")
-                ax_mu.scatter(mu_t, mu_p, alpha=0.7)
+                ax_ne.scatter(ne_t, ne_p, alpha=0.001)#, label=f"batch_number {counter}")
+                ax_mu.scatter(mu_t, mu_p, alpha=0.001)
                 # drawing updated values
                 figure.canvas.draw()
 

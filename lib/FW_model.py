@@ -59,7 +59,7 @@ def fisher_wright_simulator(
     if n_alleles > 2: dist_func = np.random.multinomial
     else: dist_func = np.random.binomial
 
-    allele_freq = np.zeros([n_generations, n_repeats, n_alleles], dtype=np.float16)
+    allele_freq = np.zeros([n_generations, n_repeats, n_alleles], dtype=np.float64)
 
     # Set the initial condition at the first step
     if set_allele_freq_equal:
@@ -177,7 +177,7 @@ class FWSim:
         self.initialize_allele_freq_matrix()
 
     def initialize_allele_freq_matrix(self):
-        self.allele_freq = np.zeros([self.n_generations, self.n_alleles+self.max_mutation_size], dtype=np.float16)
+        self.allele_freq = np.zeros([self.n_generations, self.n_alleles+self.max_mutation_size], dtype=np.float64)
         self.allele_freq[0, :self.n_alleles] = 1 / self.n_alleles
         self.allele_mutation_indices = {idx: [] for idx in range(self.n_alleles)}
         self.allele_mutation_indices_set = set()

@@ -457,8 +457,8 @@ class BOLFI4WF:
         # Add the simulator node and observed data to the model
         return elfi.Simulator(
             self.simulator_function,
-            *self.priors,
-            *self.function_params,
+            *self.priors,       #self.Ne, self.mutation_rate,
+            *self.function_params, #fasta_file, n_generations, max_mutation
             self._work_dir,
             self.save_simulations,
             self.filter_allele_freq_below,
@@ -471,7 +471,7 @@ class BOLFI4WF:
     def get_elfi_summary_statistics(self, stats_to_summarise=None):
         from config import SS_INDICES
         sumstats = list(SS_INDICES.keys()) if stats_to_summarise is None else stats_to_summarise
-        self.summaries = [elfi.Summary(self._get_summary_column, self.model, stat_key, self.ss_indices, name=stat_key) for stat_key in
+        self.summaries = [elfi.Summary(self._get_summary_column, self.model, stat_key, self.number_of_batches, self.ss_indices, name=stat_key) for stat_key in
                           sumstats]
 
     def get_elfi_distance(self):
@@ -525,41 +525,23 @@ class BOLFI4WF:
         return self.simulator_function(**kwargs)
 
     @staticmethod
-    def _get_summary_column(y, column, ss_indices=None):
+    def _get_summary_column(y, column, batch_size=1, ss_indices=None):
         from config import SS_INDICES
         ss_indices = SS_INDICES if ss_indices is None else ss_indices
         #indices_dict = {"max_H" : 0, "min_H": 1, "a_BL_mean": 2, "a_BL_median": 3}
         #return np.array([y[0][column]])
-        y = y.reshape([len(ss_indices)])
-        return y[ss_indices[column]]
-
-"""
-##True inputs
-#{"initial_allele_seq": ["AAGTTCAAAGTGT"], "n_individuals": 100, "n_generations": 20, "mutation_rates": 0.6, "max_mutation_size": 100}
-
-##Outputs
-{"max_H": 0.2352274456166919, "min_H": 0.0, "a_BL_mean": 0.08888538418754201, "a_BL_median": 0.08632864864667722}
-
-import json
-tru_f = '/Users/berk/Projects/jlees/data/simulations/20230428-1653/Sim_99/tree_stats.json'
-with open(tru_f) as fh:
-    tru_dict = json.load(fh)
-
-observed = np.zeros([1, len(list(tru_dict.values()))])
-observed[0,:] = np.array(list(tru_dict.values()))
-observed = np.array([0.2352274456166919, 0.0, 0.08888538418754201, 0.08632864864667722], dtype=
-[
-    ("max_H", np.float64),
-    ("min_H", np.float64),
-    ("a_BL_mean", np.float64),
-    ("a_BL_median", np.float64),
-])"""
+        the_size = [len(ss_indices), batch_size]
+        try:
+            y = y.reshape(the_size)
+        except ValueError:
+            y = np.repeat(y, 12, axis=1)
+            y = y.reshape(the_size)
+        return y[ss_indices[column],:]
 
 #import gzip
 #with gzip.open("/Users/berk/Projects/jlees/trial/pneumoniea_5_results.npy.gz", "rb") as f:
 #    observed = np.frombuffer(f.read(), dtype=np.float64)
-
-observed = np.load("/Users/berk/Projects/jlees/vs_codon/pneumoniea/pneumoniea_1_trial_results.npy")
+#observed = np.load("/Users/berk/Projects/jlees/vs_codon/pneumoniea/pneumoniea_1_trial_results.npy")
 from lib.simulator import simulator
 from config import DATA_PATH
 import os
@@ -567,24 +549,26 @@ import time
 workdir = os.path.join(DATA_PATH, "BOLFI", "simulations",  str(time.strftime("%Y%m%d-%H%M")))
 
 prior_params = {
-    "Ne": {"distribution": "uniform", "min": 10, "max": 1000},
+    "Ne": {"distribution": "uniform", "min": 100, "max": 1000},
     "mutation_rate": {"distribution": "uniform", "min": 0.0, "max": 1.0},
 }
 
 ##### input_fasta, n_generations, max_mutations
 #function_params = ["/Users/berk/Projects/jlees/data/WF_input.fasta", 50, 500]
 function_params = ["/Users/berk/Projects/jlees/data/Streptococcus_pneumoniae.fasta", 50, 5000]
-batch_size = 1
+batch_size = 12
 
 import pandas as pd
 
-clean_df = pd.read_csv("/Users/berk/Documents/cleaned_data.csv")
+clean_df = pd.read_csv("/Users/berk/Projects/jlees/data/truth_data/truth_data_stats.csv")
 ss_list = list(clean_df.columns)[:-2]
 ss_indices = {ss: i for i, ss in enumerate(ss_list)}
 
-observed_ss = np.array(clean_df.iloc[0,:-2])
-trues = clean_df.iloc[0,-2:]
+observed_ss = np.array(clean_df.iloc[0:batch_size,:-2])
+trues = clean_df.iloc[0:batch_size,-2:]
 print(trues)
+print(ss_indices)
+
 bolfi_wf = BOLFI4WF(
     ## Simulator params
     simulator_function=elfi.tools.vectorize(simulator),
@@ -595,16 +579,16 @@ bolfi_wf = BOLFI4WF(
     summary_stats=ss_list,
     ss_indices=ss_indices,
     ## Bolfi params
-    initial_evidence=100,
+    initial_evidence=12,
     update_interval=5,
-    n_evidence=400,
+    n_evidence=40,
     acq_noise_var=0.0,
     bounds=None,
-    n_post_samples=800,
+    n_post_samples=80,
     ###Misc
-    number_of_batches=batch_size,
+    number_of_batches=1,
     work_dir=workdir,
     save_simulations=False,
 )
 
-#bolfi_wf.run_bolfi()
+bolfi_wf.run_bolfi()

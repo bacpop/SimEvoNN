@@ -83,7 +83,7 @@ class Simulator(Alleles, PhyloTree):
 
     def run(self):
         for i in range(1, self.n_repeats + 1):
-            ne, mu = (np.random.randint(1e+2, 1e+8), np.random.uniform(0, 1e-2)) if self.mutation_rate is None or self.n_individuals is None else (self.n_individuals, self.mutation_rate)
+            ne, mu = (np.random.randint(10, 1000), np.random.uniform(0, 1e-1)) if self.mutation_rate is None or self.n_individuals is None else (self.n_individuals, self.mutation_rate)
             for b in range(1, self.n_batches+1):
                 self.sim_number += 1
                 self._create_new_dir(self.sim_number)
@@ -267,7 +267,7 @@ def simulator(n_individuals, mutation_rate,  ### These are for Priors
                   mutation_rate=mutation_rate,
                   max_mutations=max_mutations,
                   n_repeats=n_repeats,
-                  n_batches=batch_size,
+                  n_batches=1,
                   workdir=work_dir,
                   outdir=outdir if outdir is not None else os.path.join(DATA_PATH, "simulations",
                                                                              str(time.strftime("%Y%m%d-%H%M"))),
@@ -279,8 +279,8 @@ def simulator(n_individuals, mutation_rate,  ### These are for Priors
     s.run()
     if change_indices is not None:
         from config import SS_INDICES
-        res = np.zeros(len(change_indices))
+        res = np.zeros([n_repeats,len(change_indices)])
         for k,v in change_indices.items():
-            res[v] = s.resulting_matrix[:,SS_INDICES[k]]
+            res[:,v] = s.resulting_matrix[:,SS_INDICES[k]]
         return res
     return s.resulting_matrix
