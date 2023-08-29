@@ -18,7 +18,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Preprocess simulation results data for training')
     parser.add_argument('--input_csv', type=str, help='Path to simulation results', required=True)
     parser.add_argument('--output_csv', type=str, help='Path to save preprocessed data', required=True)
-    parser.add_argument('--scaler_type', type=str, help='Type of scaler to use', required=False, default="max_abs"),# options=["max_abs", "min_max", "standard", "robust"])
+    parser.add_argument('--scaler_type', type=str, help='Type of scaler to use from "max_abs", "min_max", "standard", "robust"', required=False, default="max_abs"),# options=["max_abs", "min_max", "standard", "robust"])
     parser.add_argument('--corr_threshold', type=float, help='Correlation threshold for feature selection', required=False, default=0.95)
     parser.add_argument('--feature_na_percentage', type=float, help='Percentage of missing values allowed in a feature', required=False, default=0.5)
     args = parser.parse_args()

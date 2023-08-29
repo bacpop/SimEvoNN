@@ -33,6 +33,12 @@ def run_simulator(args):
     if total_simulations == 0:
         raise Exception("Batch size or n_simulations cannot be 0")
 
+    # set prior parameters
+    prior_params = {
+        "Ne": {"distribution": str(args.ne_distribution), "min": args.n_individuals_min, "max": args.n_individuals_max, "mean": args.n_individuals_mean, "std": args.n_individuals_std},
+        "mutation_rate": {"distribution": str(args.mu_distribution), "min": args.mutation_rate_min, "max": args.mutation_rate_max, "mean": args.mutation_rate_mean, "std": args.mutation_rate_std}
+    }
+
     ## Run simulations
     m = simulator(
                 n_generations=args.n_generations,
@@ -46,7 +52,8 @@ def run_simulator(args):
                 outdir=output_dir,
                 filter_below=args.filter_below,
                 save_data=args.save_all_data,
-                add_parameters=True
+                add_parameters=True,
+                prior_parameters=prior_params,
             )
 
     ##Save simulation results
@@ -69,6 +76,26 @@ if __name__ == '__main__':
     parser.add_argument('--outdir', type=str, help='Output directory for simulations', required=False, default=None)
     parser.add_argument('--compress', action='store_true', help='Compress the output files', required=False)
     parser.add_argument('--save_all_data', action='store_true', help='Save all data regarding the simulations', required=False)
+    parser.add_argument('--n_individuals_min', type=int, help='Minimum number of individuals to simulate',
+                        required=False, default=10)
+    parser.add_argument('--n_individuals_mean', type=int, help='Mean of individuals to simulate, required if distribution is normal',
+                        required=False, default=1000)
+    parser.add_argument('--n_individuals_std', type=int, help='Std of individuals to simulate, required if distribution is normal',
+                        required=False, default=200)
+    parser.add_argument('--n_individuals_max', type=int, help='Maximum number of individuals to simulate',
+                        required=False, default=1000)
+    parser.add_argument('--mutation_rate_min', type=float, help='Minimum mutation rate to simulate', required=False,
+                        default=0.0001)
+    parser.add_argument('--mutation_rate_max', type=float, help='Maximum mutation rate to simulate', required=False,
+                        default=0.1)
+    parser.add_argument('--mutation_rate_mean', type=float, help='Mean mutation rate to simulate, required if distribution is normal', required=False,
+                        default=0.05)
+    parser.add_argument('--mutation_rate_std', type=float, help='Std of mutation rate to simulate, required if distribution is normal', required=False,
+                        default=0.1)
+    parser.add_argument('--mu_distribution', type=str, help='Mutation rate distribution', required=False,
+                        default="uniform")
+    parser.add_argument('--ne_distribution', type=str, help='Effective population size distribution', required=False,
+                        default="uniform")
 
     args = parser.parse_args()
 

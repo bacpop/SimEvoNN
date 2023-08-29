@@ -83,7 +83,7 @@ class Simulator(Alleles, PhyloTree):
 
     def run(self):
         for i in range(1, self.n_repeats + 1):
-            ne, mu = (np.random.randint(10, 1000), np.random.uniform(0, 1e-1)) if self.mutation_rate is None or self.n_individuals is None else (self.n_individuals, self.mutation_rate)
+            ne, mu = self._get_prior_distributions()
             for b in range(1, self.n_batches+1):
                 self.sim_number += 1
                 self._create_new_dir(self.sim_number)
@@ -127,12 +127,13 @@ class Simulator(Alleles, PhyloTree):
                 self.sumsts_matrix[(i - 1) * self.n_batches + b - 1:(i - 1) * self.n_batches + b, len(self.tree_stats_idx):] = self.allele_stats
 
                 if self.save_data:
-                    out_dir = os.path.join(self.out_dir, f"Sim_{self.sim_number}")
+                    out_dir = os.path.join(self.out_dir, f"Sim_{self.sim_number}_{b}")
                     os.mkdir(out_dir) if not os.path.exists(out_dir) else None
                     self.save_stats(os.path.join(out_dir, 'tree_stats.json'))
                     try:
                         self.save_tree(os.path.join(out_dir, 'tree.png'))
-                    except ModuleNotFoundError:
+                    except ModuleNotFoundError as e:
+                        print(f"Cannot save tree as png, please install:\n {e}")
                         pass
                     self.save_simulation(outdir=out_dir)
                     self._mv_maple_outputs(out_dir)
@@ -221,12 +222,30 @@ class Simulator(Alleles, PhyloTree):
         return rv_list
 
     def _get_prior_distributions(self):
-        ### Not used atm, but can be used to set random priors from cli
-        if self.prior_parameters is None:
-            params_dict = None
-            pass  #### Automatically set the priors
-        elif isinstance(self.prior_parameters, dict):
-            pass  #### Set the priors from the dictionary
+        if self.prior_parameters is None: #### Automatically set the priors
+            ne = np.random.randint(10, 1000) if self.n_individuals is None else self.n_individuals
+            mu = np.random.uniform(0, 1e-1) if self.mutation_rate is None else self.mutation_rate
+            return ne, mu
+        elif isinstance(self.prior_parameters, dict): #### Set the priors from the dictionary
+            dist_ne = self.prior_parameters["Ne"]["distribution"] == "uniform"
+            dist_mu = self.prior_parameters["mutation_rate"]["distribution"] == "uniform"
+            if dist_ne == "uniform":
+                ne = np.random.randint(self.prior_parameters["Ne"]["min"], self.prior_parameters["Ne"]["max"])
+            elif dist_ne == "loguniform":
+                ne = np.random.loguniform(self.prior_parameters["Ne"]["min"], self.prior_parameters["Ne"]["max"])
+            elif dist_ne == "normal":
+                ne = np.random.normal(self.prior_parameters["Ne"]["mean"], self.prior_parameters["Ne"]["std"])
+            else:
+                raise ValueError("Ne distribution must be one of the following: uniform, loguniform, normal")
+            if dist_mu == "uniform":
+                mu = np.random.uniform(self.prior_parameters["mutation_rate"]["min"], self.prior_parameters["mutation_rate"]["max"])
+            elif dist_mu == "loguniform":
+                mu = np.random.loguniform(self.prior_parameters["mutation_rate"]["min"], self.prior_parameters["mutation_rate"]["max"])
+            elif dist_mu == "normal":
+                mu = np.random.normal(self.prior_parameters["mutation_rate"]["mean"], self.prior_parameters["mutation_rate"]["std"])
+            else:
+                raise ValueError("mutation_rate distribution must be one of the following: uniform, loguniform, normal")
+            return ne, mu
         elif isinstance(self.prior_parameters, str):
             pass  #### Read the priors from the file
         else:
@@ -237,6 +256,7 @@ def simulator(n_individuals, mutation_rate,  ### These are for Priors
               input_fasta, n_generations, max_mutations, work_dir=None,
               save_data=False, filter_below=0.0,n_repeats=1, change_indices:dict=None,
               batch_size=1, random_state=None, add_parameters=False, outdir=None, dtype=np.float32,
+              prior_parameters=None
               ):
     """Wrapper for the simulator to make it compatible with the ELFI model
 
@@ -267,13 +287,14 @@ def simulator(n_individuals, mutation_rate,  ### These are for Priors
                   mutation_rate=mutation_rate,
                   max_mutations=max_mutations,
                   n_repeats=n_repeats,
-                  n_batches=1,
+                  n_batches=batch_size,
                   workdir=work_dir,
                   outdir=outdir if outdir is not None else os.path.join(DATA_PATH, "simulations",
                                                                              str(time.strftime("%Y%m%d-%H%M"))),
                   filter_allele_freq_below=filter_below,
                   save_data=save_data,
                   save_parameters_on_output_matrix=add_parameters,
+                  prior_parameters=prior_parameters,
                   )
 
     s.run()

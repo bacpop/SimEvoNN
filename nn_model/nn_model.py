@@ -243,5 +243,5 @@ def process_nn_model(
 
     save_model(model, save_path)
     plot_loss(train_loss, test_loss)
-    get_r2_array(test_df, model, scaler, 50, plot=True, save_path=save_path.replace(".pth", ".png"))
+    get_r2_array(test_df, model, scaler, 100, plot=True, save_path=save_path.replace(".pth", ".png"))
 

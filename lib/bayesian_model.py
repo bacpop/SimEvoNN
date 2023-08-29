@@ -3,7 +3,7 @@ import math
 import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
-from SIR_model import simulate_stochastic_SIR, simulate_deterministic_SIR, vectorised_SIR_simulator
+#from SIR_model import simulate_stochastic_SIR, simulate_deterministic_SIR, vectorised_SIR_simulator
 
 
 ### Try to simulate transmisson (SIR) model with Bayesian inference
@@ -81,7 +81,7 @@ def plot_distances(res, par_to_estimate):
         idx += 1
     plt.show()
 
-    """plot_distances(*ABC_SIR(
+    plot_distances(*ABC_SIR(
         n_particles=100,
         distance_threshold = 500,
         beta = 0.3, #true values
@@ -93,7 +93,7 @@ def plot_distances(res, par_to_estimate):
         simulate_gamma=True,
         simulate_n_infected=True,
         simulate_N=True
-    ))"""
+    ))
 
 
 ### Try ELFI ### only works with Python 3.7
@@ -102,7 +102,7 @@ import scipy.stats as ss
 
 # print(vectorised_SIR_simulator(0.3, 0.1, 3, 1000, 10, 2))
 
-from SIR_model import plot_sir_matrix
+#from SIR_model import plot_sir_matrix
 
 
 # plot_sir_matrix(vectorised_SIR_simulator([0.3,0.5,0.9], [0.01,0.2,0.7], 5, 50, 100, 3), separate_plots=True)
@@ -293,7 +293,7 @@ def bolfi_sir_trial():
 # bolfi_sir_trial()
 
 ## Fisher Wright model bolfi trial
-from FW_model import fisher_wright_simulator
+#from FW_model import fisher_wright_simulator
 
 
 def bolfi_FW_trial():
@@ -462,7 +462,8 @@ class BOLFI4WF:
             self._work_dir,
             self.save_simulations,
             self.filter_allele_freq_below,
-            self.number_of_batches,
+            #1,
+            self.number_of_batches, #--> since Bolfi batches outside of the function, we need to set it to 1
             self.ss_indices,
             observed=self.observed_data,
             name=name,
@@ -471,16 +472,16 @@ class BOLFI4WF:
     def get_elfi_summary_statistics(self, stats_to_summarise=None):
         from config import SS_INDICES
         sumstats = list(SS_INDICES.keys()) if stats_to_summarise is None else stats_to_summarise
-        self.summaries = [elfi.Summary(self._get_summary_column, self.model, stat_key, self.number_of_batches, self.ss_indices, name=stat_key) for stat_key in
+        self.summaries = [elfi.Summary(self._get_summary_column, self.model, stat_key, self.ss_indices, name=stat_key) for stat_key in
                           sumstats]
 
-    def get_elfi_distance(self):
+    def get_elfi_distance(self, draw_model=False):
         self.distance = elfi.Distance(self.distance_name, *self.summaries)
-        #elfi.draw(self.distance, filename='Wright-Fisher_ELFI_model')
+        if draw_model:
+            elfi.draw(self.distance, filename='Wright-Fisher_ELFI_model')
 
     def get_bolfi_inference_model(self):
         log_distance = self._log_distance()
-
         bounds = self.bounds or self._get_bounds_from_priors()
         # Set up the inference method
         bolfi = elfi.BOLFI(#self.model,
@@ -525,70 +526,60 @@ class BOLFI4WF:
         return self.simulator_function(**kwargs)
 
     @staticmethod
-    def _get_summary_column(y, column, batch_size=1, ss_indices=None):
+    def _get_summary_column(y, column, ss_indices=None):
         from config import SS_INDICES
         ss_indices = SS_INDICES if ss_indices is None else ss_indices
-        #indices_dict = {"max_H" : 0, "min_H": 1, "a_BL_mean": 2, "a_BL_median": 3}
-        #return np.array([y[0][column]])
-        the_size = [len(ss_indices), batch_size]
-        try:
-            y = y.reshape(the_size)
-        except ValueError:
-            y = np.repeat(y, 12, axis=1)
-            y = y.reshape(the_size)
-        return y[ss_indices[column],:]
+        return y.T[ss_indices[column],:]
 
-#import gzip
-#with gzip.open("/Users/berk/Projects/jlees/trial/pneumoniea_5_results.npy.gz", "rb") as f:
-#    observed = np.frombuffer(f.read(), dtype=np.float64)
-#observed = np.load("/Users/berk/Projects/jlees/vs_codon/pneumoniea/pneumoniea_1_trial_results.npy")
-from lib.simulator import simulator
-from config import DATA_PATH
-import os
-import time
-workdir = os.path.join(DATA_PATH, "BOLFI", "simulations",  str(time.strftime("%Y%m%d-%H%M")))
 
-prior_params = {
-    "Ne": {"distribution": "uniform", "min": 100, "max": 1000},
-    "mutation_rate": {"distribution": "uniform", "min": 0.0, "max": 1.0},
-}
+if __name__ == '__main__':
+    from lib.simulator import simulator
+    from config import DATA_PATH
+    import os
+    import time
+    workdir = os.path.join(DATA_PATH, "BOLFI", "simulations",  str(time.strftime("%Y%m%d-%H%M")))
 
-##### input_fasta, n_generations, max_mutations
-#function_params = ["/Users/berk/Projects/jlees/data/WF_input.fasta", 50, 500]
-function_params = ["/Users/berk/Projects/jlees/data/Streptococcus_pneumoniae.fasta", 50, 5000]
-batch_size = 12
+    prior_params = {
+        "Ne": {"distribution": "uniform", "min": 100, "max": 1000},
+        "mutation_rate": {"distribution": "uniform", "min": 0.0, "max": 1.0},
+    }
 
-import pandas as pd
+    ##### input_fasta, n_generations, max_mutations
+    #function_params = ["/Users/berk/Projects/jlees/data/WF_input.fasta", 50, 500]
+    function_params = ["/Users/berk/Projects/jlees/data/Streptococcus_pneumoniae.fasta", 50, 5000]
+    batch_size = 12
 
-clean_df = pd.read_csv("/Users/berk/Projects/jlees/data/truth_data/truth_data_stats.csv")
-ss_list = list(clean_df.columns)[:-2]
-ss_indices = {ss: i for i, ss in enumerate(ss_list)}
+    import pandas as pd
 
-observed_ss = np.array(clean_df.iloc[0:batch_size,:-2])
-trues = clean_df.iloc[0:batch_size,-2:]
-print(trues)
-print(ss_indices)
+    clean_df = pd.read_csv("/Users/berk/Projects/jlees/data/truth_data/truth_data_stats.csv")
+    ss_list = list(clean_df.columns)[:-2]
+    ss_indices = {ss: i for i, ss in enumerate(ss_list)}
 
-bolfi_wf = BOLFI4WF(
-    ## Simulator params
-    simulator_function=elfi.tools.vectorize(simulator),
-    function_params=function_params,
-    prior_params=prior_params,
-    filter_allele_freq_below=None,
-    observed_data=observed_ss,
-    summary_stats=ss_list,
-    ss_indices=ss_indices,
-    ## Bolfi params
-    initial_evidence=12,
-    update_interval=5,
-    n_evidence=40,
-    acq_noise_var=0.0,
-    bounds=None,
-    n_post_samples=80,
-    ###Misc
-    number_of_batches=1,
-    work_dir=workdir,
-    save_simulations=False,
-)
+    observed_ss = np.array(clean_df.iloc[0:batch_size,:-2])
+    trues = clean_df.iloc[0:batch_size,-2:]
+    print(trues)
+    print(ss_indices)
 
-bolfi_wf.run_bolfi()
+    bolfi_wf = BOLFI4WF(
+        ## Simulator params
+        simulator_function=elfi.tools.vectorize(simulator),
+        function_params=function_params,
+        prior_params=prior_params,
+        filter_allele_freq_below=None,
+        observed_data=observed_ss,
+        summary_stats=ss_list,
+        ss_indices=ss_indices,
+        ## Bolfi params
+        initial_evidence=6,
+        update_interval=2,
+        n_evidence=10,
+        acq_noise_var=0.0,
+        bounds=None,
+        n_post_samples=20,
+        ###Misc
+        number_of_batches=batch_size,
+        work_dir=workdir,
+        save_simulations=False,
+    )
+
+    #bolfi_wf.run_bolfi()
